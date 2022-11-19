@@ -876,6 +876,8 @@
         vxl = leftst(muvu)/leftst(mudn)
         vyl = leftst(muvv)/leftst(mudn)
         vzl = leftst(muvw)/leftst(mudn)
+        byl = leftst(mubv)
+        bzl = leftst(mubv)
         ptl = leftst(mpre)
 
 !---- Right state
@@ -888,6 +890,8 @@
         vxr = rigtst(muvu)/rigtst(mudn)
         vyr = rigtst(muvv)/rigtst(mudn)
         vzr = rigtst(muvw)/rigtst(mudn)
+        byr = rigtst(mubv)
+        bzr = rigtst(mubv
         ptr = rigtst(mpre)
 !----- Step 1. ----------------------------------------------------------|
 ! Compute wave left & right wave speed
@@ -907,6 +911,8 @@
         frxl = leftst(mfvu)
         fryl = leftst(mfvv)
         frzl = leftst(mfvw)
+        fbyl = leftst(mfbv)
+        fbzl = leftst(mfbw)    
 
 ! Right value
 ! Left value
@@ -915,6 +921,8 @@
         frxr = rigtst(mfvu)
         fryr = rigtst(mfvv) 
         frzr = rigtst(mfvw)
+        fbyr = rigtst(mfbv)
+        fbzr = rigtst(mfbw)
 
 !----- Step 4. ----------------------------------------------------------|
 ! compute middle and alfven wave
@@ -950,6 +958,9 @@
         vzlst = vzl
         rzlst = rolst*vzlst
 
+        bylst = rolst/rol * byl
+        bzlst = rolst/rol * bzl
+
         eelst =(sdl*eel - ptl*vxl + ptst*sm  )*isdml
 
 !----- Step 5B. ----------------------------------------------------------|
@@ -963,6 +974,9 @@
         ryrst = rorst*vyrst
         vzrst = vzr
         rzrst = rorst*vzrst
+
+        byrst = rolst/rol * byr
+        bzrst = rolst/rol * bzr
            
         eerst = (sdr*eer - ptr*vxr  + ptst*sm  )*isdmr
               
@@ -985,12 +999,11 @@
      &               +(fryr+msr*(ryrst-ryr))*mins1
         nflux(mrvw) = (frzl+msl*(rzlst-rzl))*maxs1 
      &               +(frzr+msr*(rzrst-rzr))*mins1
-
-! ADHOC
-        nflux(mbmu) = 0.0d0
-        nflux(mbmv) = 0.0d0
-        nflux(mbmw) = 0.0d0
-        nflux(mbps) = 0.0d0
+        nflux(mfbu) = 0.0d0
+        nflux(mfbv) = (fbyl+msl*(bylst-byl))*maxs1 
+     &               +(fbyr+msr*(byrst-byr))*mins1
+        nflux(mfbw) = (fbzl+msl*(bzlst-bzl))*maxs1 
+     &               +(fbzr+msr*(bzrst-bzr))*mins1
 
       return
       end subroutine HLLC
