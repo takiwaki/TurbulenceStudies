@@ -1,4 +1,4 @@
-# Summary
+# Introduction
 
 This page summarizes the results of numerical simulations.
 The character of the turbulence depends on the dimension and magnetic fields (see table 8.1 of Biskamp ).
@@ -15,8 +15,9 @@ The meaning of the variables are as follows. The subscipt $k$ infer the wave num
  | $A_k$      | magnetic potential | 
  | $H_k$      | kinetic helicity | 
  | $H_k^M$    | helicity   | 
+ 
+# Summary
 
-
-
+# Details
 
 [2D hydrodynamic simulation](./HYD2D.md)
