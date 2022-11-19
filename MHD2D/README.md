@@ -31,7 +31,15 @@ $$ \omega =  \partial_x v_y - \partial_y v_x $$
 
 $$ j =  \partial_x B_y - \partial_y B_x $$
 
-The spectrum of variable, $X$ ,is calculated as follows. In the analysis, $X=E$, $\omega^2$.
+The magnetic potential,$a$, is also calculated.
+
+$$ \vec{B} =  \nabla a $$
+
+The definition of cross helicity is as follows.
+
+$$ h^c = v\cdot B $$
+
+The spectrum of variable, $X$ ,is calculated as follows. In the analysis, $X=E$, $\omega^2$, $a$ and $h^c$.
 
 First 2D Fourier transformation is given.
 
