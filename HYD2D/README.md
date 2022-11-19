@@ -1,4 +1,4 @@
-# 2D deacaying turbulence
+# 2D hydrodynamic deacaying turbulence
 
 [Go to top](../README.md)  
 
