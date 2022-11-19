@@ -1,9 +1,30 @@
 # 2D magneto-hydrodynamic turbulence
 
+[Go to summary](./README.md)  
+
+## initial condition
+stream function is given.
+
+$$ \psi \propto \sin(2\pi k x)\sin(2\pi k y).$$
+
+Initial velocity is set from $\psi$.
+
+$$ v_x = \partial_y \psi, v_y = -\partial_x \psi, $$
+
+$$ B_x = B_0 \partial_y \psi, B_y = - B_0 \partial_x \psi, $$
+
+## Results
+
 https://user-images.githubusercontent.com/20675833/202852001-81dcb587-8984-445a-aae4-c926701b764f.mp4
+
+$$ \omega =  \partial_x v_y - \partial_y v_x $$
 
 
 https://user-images.githubusercontent.com/20675833/202852003-c4dbddad-e028-4bc7-8678-a35441ea9ebe.mp4
 
-![k-E_k](https://user-images.githubusercontent.com/20675833/202852008-ea66a8b2-54cd-4cb4-bb9e-b72ddd3cf7f1.png)
-![k-V_k](https://user-images.githubusercontent.com/20675833/202852013-94e2752a-073d-4480-890c-8b70ed959db2.png)
+$$ j =  \partial_x B_y - \partial_y B_x $$
+
+![k-A_k](https://user-images.githubusercontent.com/20675833/202852563-6173419d-4dec-4128-a19d-6de0e66c330e.png)
+![k-C_k](https://user-images.githubusercontent.com/20675833/202852564-a63f62d2-52ea-4e36-985f-44055a4d0f2f.png)
+![k-E_k](https://user-images.githubusercontent.com/20675833/202852566-cf65381a-5329-449e-92b0-179bb28fff1f.png)
+![k-V_k](https://user-images.githubusercontent.com/20675833/202852567-c1fc3290-7a5a-4094-abf8-85ced168f61f.png)
