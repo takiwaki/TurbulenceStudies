@@ -1,6 +1,6 @@
 # 2D deacaying turbulence
 
-[Go to top](../)  
+[Go to top](../README.md)  
 
 ## How to run
 To run the code, you just type `make`.
