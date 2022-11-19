@@ -12,7 +12,7 @@ The simulation data is saved in `bindata/`.
 
 The data is binary file, to make figures analyis is done by `Analysis.x`.
 
-## initial condition
+## Initial condition
 stream function is given.
 
 $$ \psi \propto \sin(2\pi k x)\sin(2\pi k y).$$
@@ -21,7 +21,7 @@ Initial velocity is set from $\psi$.
 
 $$ v_x = \partial_y \psi, v_y = -\partial_x \psi, $$
 
-## analysis
+## Analysis
 
 Animation of vorticity will be made.
 
