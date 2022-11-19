@@ -1,5 +1,15 @@
 # 2D deacaying turbulence
 
+## How to run
+To run the code, you just type `make`.
+    
+    make
+    
+Then `Simulation.x`is compiled and automatically executed.
+The simulation data is saved in `bindata/`.
+
+The data is binary file, to make figures analyis is done by `Analysis.x`.
+
 ## initial condition
 stream function is given.
 
