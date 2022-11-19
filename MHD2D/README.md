@@ -31,7 +31,9 @@ $$ \omega =  \partial_x v_y - \partial_y v_x $$
 
 $$ j =  \partial_x B_y - \partial_y B_x $$
 
-The spectrum of variable, $X$ ,is calculated as follows. First 2D Fourier transformation is given.
+The spectrum of variable, $X$ ,is calculated as follows. In the analysis, $X=E$, $\omega^2$.
+
+First 2D Fourier transformation is given.
 
 $$\hat{X}_{{\rm 2D},c}(k_x,k_y) = \iint dx dy X \cos(2\pi (k_x x+k_y y))$$
 
