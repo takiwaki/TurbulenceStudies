@@ -7,4 +7,4 @@ You can perform 4 kinds of simulations.
 - [3D hydroynamic simulation](./HYD3D/)
 - [3D magneto-htdrodynamic simulation](./MHD3D/)
 
-The resuls are summared [here](./docs/).
+The results are summared [here](./docs/).
