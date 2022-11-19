@@ -3,10 +3,10 @@
 ## githubとファイルのやりとりができるようにする設定
 XCで
     
-    ssh keygen -t rsa
+    ssh-keygen -t rsa
     
 ファイル名を聞かれたらid_rsa_gitと答える．  
-公開鍵, `id_ras_git.pub`の中身ををgitに登録する．  
+公開鍵, `id_rsa_git.pub`の中身ををgitに登録する．  
 
 秘密鍵を`./ssh/id_rsa_git`に置く.  
 
@@ -28,9 +28,10 @@ Gitを使いはじめるとき，最初にユーザー名とe-mailアドレス�
     git config --global user.email taro.tenmon@nao.ac.jp        
 
 ## 初回のダウンロード  
-develop ブランチのものをダウンロードしたい場合．
+`main` ブランチのものを`test1`ディレクトリにダウンロードしたい場合．
     
-    git clone -b develop git@github.com:takiwaki/3DnSEV Develop  
+    git clone -b main git@github.com:takiwaki/TurbulenceStudies
+ test1  
 
 ## アップロード  
 アップデートしたら`git status`で変更されたファイルを確認  
