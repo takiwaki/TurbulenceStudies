@@ -6,4 +6,4 @@ You can perform 4 kinds of simulations, i.e.,
 [3D hydro-](./HYD3D/) and 
 [3D magneto-hydro-](./MHD3D/) simulations.
 
-The resuls are summared [here](./doc/).
+The resuls are summared [here](./docs/).
