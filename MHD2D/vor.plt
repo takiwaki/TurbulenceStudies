@@ -89,6 +89,9 @@ splot  \
 ofname = sprintf("figures/jcd%05d.png",ifnum)
 set output ofname
 
+maxcb=20.0
+set cbrange [-maxcb:maxcb]
+
 splot  \
   ifnames u ($1):($2):4 w pm3d  \
 
