@@ -572,7 +572,8 @@
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
 !         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
+!         call HLLC(leftst,rigtst,nflux)
+         call HLLD(leftst,rigtst,nflux)
          nflux1(mden,i,j,k)=nflux(mden)
          nflux1(mrv1,i,j,k)=nflux(mrvu)
          nflux1(mrv2,i,j,k)=nflux(mrvv)
@@ -744,7 +745,9 @@
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
 !         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
+!         call HLLC(leftst,rigtst,nflux)
+         call HLLD(leftst,rigtst,nflux)
+
          nflux2(mden,i,j,k)=nflux(mden)
          nflux2(mrv1,i,j,k)=nflux(mrvw)
          nflux2(mrv2,i,j,k)=nflux(mrvu) ! mrv2=3, mrvu=2
@@ -1015,6 +1018,315 @@
 
       return
       end subroutine HLLC
+
+      subroutine HLLD(leftst,rigtst,nflux)
+!=====================================================================
+!
+! HLLD Scheme
+!
+! Purpose
+! Calculation of Numerical Flux by HLLD method
+!
+! Reference
+!
+! Input
+! Output
+!=====================================================================
+      use fluxmod, only: mflx,madd
+     &                 , mudn,muvu,muvv,muvw,muet
+     &                 , mfdn,mfvu,mfvv,mfvw,mfet
+     &                 , mcsp,mvel,mpre
+     &                 , mden,mrvu,mrvv,mrvw,meto
+     &                 , mubu,mubv,mubw,mubp
+     &                 , mfbu,mfbv,mfbw,mfbp
+     &                 , mbmu,mbmv,mbmw
+
+      implicit none
+      real(8),dimension(2*mflx+madd),intent(in)::leftst,rigtst
+      real(8),dimension(mflx),intent(out)::nflux
+
+!----- U -----
+! qql :: left state
+! qqr :: right state
+      real(8) :: rol,vxl,vyl,vzl,ptl,eel
+      real(8) :: ror,vxr,vyr,vzr,ptr,eer
+      real(8) :: rxl,ryl,rzl
+      real(8) :: rxr,ryr,rzr
+      real(8) :: bxs,byl,bzl
+      real(8) ::     byr,bzr
+      real(8) :: ptst
+
+!----- U* ----
+! qqlst ::  left state
+! qqrst :: right state
+      real(8) :: rolst,vxlst,vylst,vzlst,eelst
+      real(8) :: rorst,vxrst,vyrst,vzrst,eerst
+      real(8) :: rxlst,rylst,rzlst
+      real(8) :: rxrst,ryrst,rzrst
+      real(8) ::       bylst,bzlst
+      real(8) ::       byrst,bzrst
+
+!----- U** ----
+! qqlst ::  left state
+! qqrst :: right state
+      real(8) :: vyldst,vzldst,eeldst
+      real(8) :: vyrdst,vzrdst,eerdst
+      real(8) :: ryldst,rzldst
+      real(8) :: ryrdst,rzrdst
+      real(8) ::       byldst,bzldst
+      real(8) ::       byrdst,bzrdst
+
+!----- flux ---
+! fqql ::  left physical flux
+! fqqr :: right physical flux
+      real(8) :: frol,frxl,fryl,frzl,feel
+      real(8) ::           fbyl,fbzl
+      real(8) :: fror,frxr,fryr,frzr,feer
+      real(8) ::           fbyr,fbzr
+
+!----- wave speed ---
+! sl ::  left-going fastest signal velocity
+! sr :: right-going fastest signal velocity
+! sm :: contact discontinuity velocity
+! slst ::  left-going alfven velocity
+! srst :: right-going alfven velocity
+      real(8) :: sm,sl,sr,slst,srst
+
+! cfl :: left-state Fast wave velocity
+! cfr :: right-sate Fast wave velocity
+      real(8) :: cfl,cfr
+
+!--------------------
+! temporary variables
+      real(8) :: sdl,sdr,sdml,sdmr,isdml,isdmr,rosdl,rosdr
+      real(8) :: temp
+  
+! no if
+      real(8) :: sign1,maxs1,mins1
+      real(8) :: msl,msr,mslst,msrst,temp1,invsumro,sqrtror,sqrtrol,abbx
+      real(8) :: bxsq,temp_fst,eps,itf,vdbstl,vdbstr,signbx
+
+!----- Step 0. ----------------------------------------------------------|
+      eps = 1d-30
+!---- Left state
+        
+        rol = leftst(mudn)
+        eel = leftst(muet)
+        rxl = leftst(muvu)
+        ryl = leftst(muvv)
+        rzl = leftst(muvw)
+        vxl = leftst(muvu)/leftst(mudn)
+        vyl = leftst(muvv)/leftst(mudn)
+        vzl = leftst(muvw)/leftst(mudn)
+        byl = leftst(mubv)
+        bzl = leftst(mubv)
+        ptl = leftst(mpre)
+
+!---- Right state
+        
+        ror = rigtst(mudn)
+        eer = rigtst(muet)
+        rxr = rigtst(muvu)
+        ryr = rigtst(muvv)
+        rzr = rigtst(muvw)
+        vxr = rigtst(muvu)/rigtst(mudn)
+        vyr = rigtst(muvv)/rigtst(mudn)
+        vzr = rigtst(muvw)/rigtst(mudn)
+        byr = rigtst(mubv)
+        bzr = rigtst(mubv)
+        ptr = rigtst(mpre)
+
+!----- Step 1. ----------------------------------------------------------|
+! Compute wave left & right wave speed
+!
+        cfl = leftst(mcsp)
+        cfr = rigtst(mcsp)
+
+        sl = min(vxl,vxr)-max(cfl,cfr) ! note sl is negative
+        sr = max(vxl,vxr)+max(cfl,cfr)
+!----- Step 2. ----------------------------------------------------------|
+! compute L/R fluxs
+!
+! Left value
+        frol = leftst(mfdn)
+        feel = leftst(mfet)
+        frxl = leftst(mfvu)
+        fryl = leftst(mfvv)
+        frzl = leftst(mfvw)
+        fbyl = leftst(mfbv)
+        fbzl = leftst(mfbw)
+
+! Right value
+        fror = rigtst(mfdn)
+        feer = rigtst(mfet)
+        frxr = rigtst(mfvu)
+        fryr = rigtst(mfvv) 
+        frzr = rigtst(mfvw)
+        fbyr = rigtst(mfbv)
+        fbzr = rigtst(mfbw)
+
+
+!----- Step 4. ----------------------------------------------------------|
+! compute middle and alfven wave
+!
+        sdl = min(-1d-20,sl - vxl)
+        sdr = max(1d-20,sr - vxr)
+        rosdl = rol*sdl
+        rosdr = ror*sdr
+
+        temp = 1.0d0/(rosdr - rosdl)
+! Eq. 45
+        sm = (rosdr*vxr - rosdl*vxl - ptr + ptl)*temp
+           
+        sdml = min(-1d-20,sl - sm); isdml = 1.0d0/sdml
+        sdmr = max(1d-20,sr - sm); isdmr = 1.0d0/sdmr
+
+!----- Step 5. ----------------------------------------------------------|
+! compute intermediate states
+!
+! Eq. 49
+        ptst = (rosdr*ptl-rosdl*ptr+rosdl*rosdr*(vxr-vxl))*temp
+		
+!----- Step 5A. ----------------------------------------------------------|
+! compute Ul*
+!
+           bxs = 0.5d0*(leftst(mubu)+rigtst(mubu))
+           bxsq = bxs*bxs
+           temp_fst = rosdl*sdml - bxsq
+           sign1 = sign(1.0d0,abs(temp_fst)-eps)
+
+           maxs1 = max(0.0d0,sign1)
+           mins1 = min(0.0d0,sign1)
+
+           itf = 1.0d0/(temp_fst+mins1)
+           isdml = 1.0d0/sdml
+
+           temp = bxs*(sdl-sdml)*itf
+           rolst = maxs1*(rosdl*isdml) - mins1*rol
+           vxlst = maxs1*sm - mins1*vxl
+           rxlst = rolst*vxlst
+           
+           vylst = maxs1*(vyl-byl*temp) - mins1*vyl
+           rylst = rolst*vylst
+           vzlst = maxs1*(vzl-bzl*temp) - mins1*vzl
+           rzlst = rolst*vzlst
+           
+           temp = (rosdl*sdl-bxsq)*itf
+           bylst = maxs1*(byl*temp) - mins1*byl
+           bzlst = maxs1*(bzl*temp) - mins1*bzl
+
+           vdbstl = vxlst*bxs+vylst*bylst+vzlst*bzlst
+           eelst = maxs1*(sdl*eel - ptl*vxl + ptst*sm + 
+     &          bxs*(vxl*bxs+vyl*byl+vzl*bzl-vdbstl))*isdml 
+     &          - mins1*eel		
+           
+!----- Step 5B. ----------------------------------------------------------|
+! compute Ur*
+!
+           temp_fst = rosdr*sdmr - bxsq
+           sign1 = sign(1.0d0,abs(temp_fst)-eps)
+           maxs1 = max(0.0d0,sign1)
+           mins1 = min(0.0d0,sign1)
+
+           itf = 1.0d0/(temp_fst+mins1)
+           isdmr = 1.0d0/sdmr
+           
+           temp = bxs*(sdr-sdmr)*itf
+           rorst = maxs1*(rosdr*isdmr) - mins1*ror
+           vxrst = maxs1*sm - mins1*vxr
+           rxrst = rorst*vxrst
+           
+           vyrst = maxs1*(vyr-byr*temp) - mins1*vyr
+           ryrst = rorst*vyrst
+           vzrst = maxs1*(vzr-bzr*temp) - mins1*vzr
+           rzrst = rorst*vzrst
+           
+           temp = (rosdr*sdr-bxsq)*itf
+           byrst = maxs1*(byr*temp) - mins1*byr
+           bzrst = maxs1*(bzr*temp) - mins1*bzr
+				
+           vdbstr = vxrst*bxs+vyrst*byrst+vzrst*bzrst
+           eerst = maxs1*((sdr*eer - ptr*vxr  + ptst*sm)*isdmr + 
+     &          bxs*(vxr*bxs+vyr*byr+vzr*bzr-vdbstr)*isdmr) 
+     &          - mins1*eer
+
+!----- Step 5C. ----------------------------------------------------------|
+! compute Ul** and Ur**
+!
+           sqrtrol = sqrt(rolst)
+           sqrtror = sqrt(rorst)
+
+           abbx = abs(bxs)
+           signbx = sign(1.0d0,bxs)           
+           sign1 = sign(1.0d0,abbx-eps)
+
+           maxs1 = max(0d0,sign1)
+           mins1 = -min(0d0,sign1)
+           invsumro = maxs1/(sqrtrol + sqrtror)
+
+           temp = invsumro*(sqrtrol*vylst + sqrtror*vyrst 
+     &          + signbx*(byrst-bylst))
+           vyldst = vylst*mins1 + temp
+           vyrdst = vyrst*mins1 + temp
+           ryldst = rylst*mins1 + rolst * temp
+           ryrdst = ryrst*mins1 + rorst * temp
+
+           temp = invsumro*(sqrtrol*vzlst + sqrtror*vzrst 
+     &          + signbx*(bzrst-bzlst))
+           vzldst = vzlst*mins1 + temp
+           vzrdst = vzrst*mins1 + temp
+           rzldst = rzlst*mins1 + rolst * temp
+           rzrdst = rzrst*mins1 + rorst * temp
+
+           temp = invsumro*(sqrtrol*byrst + sqrtror*bylst  
+     &          + signbx*sqrtrol*sqrtror*(vyrst-vylst))
+           byldst = bylst*mins1 + temp
+           byrdst = byrst*mins1 + temp
+              
+           temp = invsumro*(sqrtrol*bzrst + sqrtror*bzlst 
+     &           + signbx*sqrtrol*sqrtror*(vzrst-vzlst))
+           bzldst = bzlst*mins1 + temp
+           bzrdst = bzrst*mins1 + temp
+              
+           temp = sm*bxs + vyldst*byldst + vzldst*bzldst
+           eeldst = eelst - sqrtrol*signbx*(vdbstl - temp)*maxs1
+           eerdst = eerst + sqrtror*signbx*(vdbstr - temp)*maxs1
+              
+!----- Step 6. ----------------------------------------------------------|
+! compute flux
+           slst = (sm - abbx/sqrtrol)*maxs1
+           srst = (sm + abbx/sqrtror)*maxs1
+
+           sign1 = sign(1.0d0,sm)
+           maxs1 = max(0.0d0,sign1)
+           mins1 = -min(0.0d0,sign1)
+
+           msl = min(sl,0.0d0)
+           msr = max(sr,0.0d0)
+           mslst = min(slst,0.0d0)
+           msrst = max(srst,0.0d0)
+
+           temp = mslst-msl
+           temp1 = msrst-msr
+
+           nflux(mden) = (frol+(rolst-rol)*msl)*maxs1 
+     &           +(fror+(rorst-ror)*msr)*mins1
+           nflux(meto) = (feel+(eelst-eel)*msl+(eeldst-eelst)*mslst)*maxs1 
+     &           +(feer+(eerst-eer)*msr+(eerdst-eerst)*msrst)*mins1
+           nflux(mrvu) = (frxl+(rxlst-rxl)*msl)*maxs1 
+     &           +(frxr+(rxrst-rxr)*msr)*mins1
+           nflux(mrvv) = (fryl+(rylst-ryl)*msl+(ryldst-rylst)*mslst)*maxs1 
+     &           +(fryr+(ryrst-ryr)*msr+(ryrdst-ryrst)*msrst)*mins1
+           nflux(mrvw) = (frzl+(rzlst-rzl)*msl+(rzldst-rzlst)*mslst)*maxs1 
+     &           +(frzr+(rzrst-rzr)*msr+(rzrdst-rzrst)*msrst)*mins1
+           nflux(mbmu) = 0d0
+           nflux(mbmv) = (fbyl+(bylst-byl)*msl+(byldst-bylst)*mslst)*maxs1 
+     &           +(fbyr+(byrst-byr)*msr+(byrdst-byrst)*msrst)*mins1
+           nflux(mbmw) = (fbzl+(bzlst-bzl)*msl+(bzldst-bzlst)*mslst)*maxs1 
+     &           +(fbzr+(bzrst-bzr)*msr+(bzrdst-bzrst)*msrst)*mins1
+
+      return
+      end subroutine HLLD
 
       subroutine UpdateConsv
       use commons
