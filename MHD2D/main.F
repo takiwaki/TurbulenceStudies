@@ -126,7 +126,7 @@
       real(8)::x
 
       real(8)::amp=1.0d-1
-      real(8)::ampb=0.0d0
+      real(8)::ampb=0.1d0
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -153,8 +153,8 @@
       do j=js,je
       do i=is,ie
          call random_number(x)
-         v1(i,j,k) =  (psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         v1(i,j,k) =       (psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         v2(i,j,k) = -     (psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
          b1(i,j,k) =  ampb*(psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
          b2(i,j,k) = -ampb*(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
           p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
@@ -814,7 +814,8 @@
      &                 , mfdn,mfvu,mfvv,mfvw,mfet
      &                 , mcsp,mvel,mpre
      &                 , mden,mrvu,mrvv,mrvw,meto
-     &                 , mbmu,mbmv,mbmw,mbps
+     &                 , mubu,mubv,mubw,mubp
+     &                 , mfbu,mfbv,mfbw,mfbp
 
       implicit none
       real(8),dimension(2*mflx+madd),intent(in)::leftst,rigtst
@@ -827,6 +828,8 @@
       real(8) :: ror,vxr,vyr,vzr,ptr,eer
       real(8) :: rxl,ryl,rzl
       real(8) :: rxr,ryr,rzr
+      real(8) ::     byl,bzl
+      real(8) ::     byr,bzr
       real(8) :: ptst
 
 !----- U* ----
@@ -836,12 +839,16 @@
       real(8) :: rorst,vxrst,vyrst,vzrst,eerst
       real(8) :: rxlst,rylst,rzlst
       real(8) :: rxrst,ryrst,rzrst
+      real(8) ::       bylst,bzlst
+      real(8) ::       byrst,bzrst
 
 !----- flux ---
 ! fqql ::  left physical flux
 ! fqqr :: right physical flux
       real(8) :: frol,frxl,fryl,frzl,feel
+      real(8) ::           fbyl,fbzl
       real(8) :: fror,frxr,fryr,frzr,feer
+      real(8) ::           fbyr,fbzr
 
 !----- wave speed ---
 ! sl ::  left-going fastest signal velocity
@@ -891,7 +898,7 @@
         vyr = rigtst(muvv)/rigtst(mudn)
         vzr = rigtst(muvw)/rigtst(mudn)
         byr = rigtst(mubv)
-        bzr = rigtst(mubv
+        bzr = rigtst(mubv)
         ptr = rigtst(mpre)
 !----- Step 1. ----------------------------------------------------------|
 ! Compute wave left & right wave speed
