@@ -59,10 +59,10 @@ fc = ifort -extend-source
 fopt = -g -traceback -O2
 #fopt = -g -traceback -check all -fpe0
 
-${exe}: main.f90
+${exe}: Simulation.f90
 	${fc} ${fopt} $< -o ${exe}
 
-${ana}: dataanalysis.f90
+${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
 
 #################
