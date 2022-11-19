@@ -65,7 +65,7 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-      do nhy=1,10000
+      do nhy=1,80000
          if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call TimestepControl
          call BoundaryCondition
@@ -119,14 +119,15 @@
       real(8)::pi
       real(8),parameter::k_ini=10.0d0
 
-      real(8),dimension(in,jn,kn)::psi1b,psi2b
+      real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
+      real(8),dimension(in,jn,kn)::mpsi1b,mpsi2b
 
       integer::seedsize
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8)::amp=1.0d-1
-      real(8)::ampb=0.1d0
+      real(8)::ampv = 1.0d-1
+      real(8)::ampb = 1.0d-1
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -140,10 +141,14 @@
       do k=ks,ke
       do j=js,je+1
       do i=is,ie+1
-         psi1b(i,j,k) = amp * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min))
-     &                      * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         psi2b(i,j,k) = amp * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min))
-     &                      * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
+         vpsi1b(i,j,k) = ampv * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min))
+     &                        * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
+         vpsi2b(i,j,k) = ampv * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min))
+     &                        * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
+         mpsi1b(i,j,k) = ampb * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min))
+     &                        * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
+         mpsi2b(i,j,k) = ampb * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min))
+     &                        * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
       enddo
       enddo
       enddo
@@ -153,10 +158,10 @@
       do j=js,je
       do i=is,ie
          call random_number(x)
-         v1(i,j,k) =       (psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -     (psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b1(i,j,k) =  ampb*(psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         b2(i,j,k) = -ampb*(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         v1(i,j,k) =  (vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         v2(i,j,k) = -(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         b1(i,j,k) =  (mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         b2(i,j,k) = -(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
           p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
          v3(i,j,k) = 0.0d0
          b3(i,j,k) = 0.0d0
