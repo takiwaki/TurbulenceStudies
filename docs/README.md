@@ -20,7 +20,7 @@ The meaning of the variables are as follows. The subscipt $k$ infer the wave num
 
 # Details
 
-[2D hydrodynamic simulation](./HYD2D.md)
-[2D magneto-hydrodynamic simulation](./MHD2D.md)
-[3D hydrodynamic simulation](./HYD3D.md)
-[3D magneto-hydrodynamic simulation](./MHD3D.md)
+[2D hydrodynamic simulation](./HYD2D.md)  
+[2D magneto-hydrodynamic simulation](./MHD2D.md)  
+[3D hydrodynamic simulation](./HYD3D.md)  
+[3D magneto-hydrodynamic simulation](./MHD3D.md)  
