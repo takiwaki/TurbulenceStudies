@@ -1,6 +1,6 @@
-# 2D deacaying turbulence
+# 3D hydrodynamic deacaying turbulence
 
-## initial condition
+## Initial condition
 stream function is given.
 
 $$ \psi \propto \sin(2\pi k x)\sin(2\pi k y).$$
@@ -9,7 +9,7 @@ Initial velocity is set from $\psi$.
 
 $$ v_x = \partial_y \psi, v_y = -\partial_x \psi, $$
 
-## analysis
+## Analysis
 
 Animation of vorticity will be made.
 
