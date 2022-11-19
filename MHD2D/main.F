@@ -816,6 +816,7 @@
      &                 , mden,mrvu,mrvv,mrvw,meto
      &                 , mubu,mubv,mubw,mubp
      &                 , mfbu,mfbv,mfbw,mfbp
+     &                 , mbmu,mbmv,mbmw
 
       implicit none
       real(8),dimension(2*mflx+madd),intent(in)::leftst,rigtst
@@ -1006,10 +1007,10 @@
      &               +(fryr+msr*(ryrst-ryr))*mins1
         nflux(mrvw) = (frzl+msl*(rzlst-rzl))*maxs1 
      &               +(frzr+msr*(rzrst-rzr))*mins1
-        nflux(mfbu) = 0.0d0
-        nflux(mfbv) = (fbyl+msl*(bylst-byl))*maxs1 
+        nflux(mbmu) = 0.0d0
+        nflux(mbmv) = (fbyl+msl*(bylst-byl))*maxs1 
      &               +(fbyr+msr*(byrst-byr))*mins1
-        nflux(mfbw) = (fbzl+msl*(bzlst-bzl))*maxs1 
+        nflux(mbmw) = (fbzl+msl*(bzlst-bzl))*maxs1 
      &               +(fbzr+msr*(bzrst-bzr))*mins1
 
       return
