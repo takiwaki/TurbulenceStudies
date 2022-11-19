@@ -1,5 +1,8 @@
 
 *.x
+*.o
+*.mod
+
 control.dat
 
 /movies/
