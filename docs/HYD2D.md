@@ -30,9 +30,9 @@ From it, then 1D Fourier transformation is given.
 
 $$\hat{X}_{\rm 1D} dk = \sqrt{ \hat{X}_{{\rm 2D},c}^2+\hat{X}_{{\rm 2D},s}^2} dk_x dk_y $$
 
-![k-E_k](https://user-images.githubusercontent.com/20675833/202843901-1f5c51f6-7bf0-43d6-8f4e-30ea8ae5d9ca.png)
-![k-V_k](https://user-images.githubusercontent.com/20675833/202843904-e5db78cc-5ffb-4a68-af75-1f97bd21b2dd.png)
 
 
+![k-E_k](https://user-images.githubusercontent.com/20675833/202852849-9acb138b-085e-490a-b166-75b8d98fb3d4.png)
 
+![k-V_k](https://user-images.githubusercontent.com/20675833/202852852-4ae2517c-b293-46d9-bdaf-b6d87c0ac2e8.png)
 
