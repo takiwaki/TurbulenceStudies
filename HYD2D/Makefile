@@ -9,8 +9,8 @@ BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
 VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
 VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 
-exe=simplehyd.x
-ana=analysis.x
+exe=Simulation.x
+ana=Analysis.x
 
 all: ${exe} ${MOVIES}
 
@@ -30,12 +30,20 @@ ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 	rm -fr ${dirf}/vor*.png
 	./MakeSnap.sh vor.plt
 
+#################
+# analysis
+#################
+
 ${VOR}: ${ana} ${BIN} control.dat
 	rm -fr ${dira}/vor*.dat
 	./${ana}
 
 control.dat: Init.sh ${BIN}
 	./Init.sh
+
+#################
+# simulation
+#################
 
 ${BIN}: ${exe}
 	rm -fr ${dird}/unf*.dat
@@ -57,7 +65,7 @@ ${exe}: main.f90
 # clean up
 #################
 clean:
-	rm -f ${exe} *.o *.mod *~
+	rm -f ${exe} ${ana} *.o *.mod *~
 
 allclean:
 	rm -fr ${dirm} ${dirf} ${dird} ${dirf}
