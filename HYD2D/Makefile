@@ -50,7 +50,7 @@ fopt=-g -traceback -O2
 ${ana}: dataanalysis.f90
 	${fc} ${fopt} $< -o ${ana}
 
-${exe}: main.F
+${exe}: main.f90
 	${fc} ${fopt} $< -o ${exe}
 
 #################
@@ -60,4 +60,4 @@ clean:
 	rm -f ${exe} *.o *.mod *~
 
 allclean:
-	rm -f ${dirm}/*.wmv ${dirf}/*.png ${dird}/*.xss
+	rm -fr ${dirm} ${dirf} ${dird} ${dirf}
