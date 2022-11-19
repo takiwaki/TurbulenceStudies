@@ -30,8 +30,8 @@ Gitを使いはじめるとき，最初にユーザー名とe-mailアドレス�
 ## 初回のダウンロード  
 `main` ブランチのものを`test1`ディレクトリにダウンロードしたい場合．
     
-    git clone -b main git@github.com:takiwaki/TurbulenceStudies
- test1  
+    git clone -b main git@github.com:takiwaki/TurbulenceStudies test1
+    
 
 ## アップロード  
 アップデートしたら`git status`で変更されたファイルを確認  
