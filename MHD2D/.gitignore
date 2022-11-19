@@ -1,5 +1,9 @@
 
+*.x
+control.dat
+
 /movies/
 /figures/
-/meddata/
+/output/
+/bindata/
 

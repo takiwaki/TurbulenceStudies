@@ -9,7 +9,9 @@ module fieldmod
     real(8),dimension(:),allocatable:: x1b,x2b
     real(8),dimension(:),allocatable:: x1a,x2a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
-    real(8),dimension(:,:,:),allocatable:: vor
+    real(8),dimension(:,:,:),allocatable:: b1,b2,b3,bp
+    real(8),dimension(:,:,:),allocatable:: vor ! vorticity
+    real(8),dimension(:,:,:),allocatable:: jcd ! current density
     real(8):: dx,dy
     real(8):: Etot,Vtot
 end module fieldmod
@@ -74,6 +76,10 @@ subroutine ReadData
      allocate(v1(in,jn,kn))
      allocate(v2(in,jn,kn))
      allocate(v3(in,jn,kn))
+     allocate(b1(in,jn,kn))
+     allocate(b2(in,jn,kn))
+     allocate(b3(in,jn,kn))
+     allocate(bp(in,jn,kn))
      allocate( p(in,jn,kn))
      is_inited = .true.
   endif
@@ -87,6 +93,10 @@ subroutine ReadData
   read(unitbin) v1(:,:,:)
   read(unitbin) v2(:,:,:)
   read(unitbin) v3(:,:,:)
+  read(unitbin) b1(:,:,:)
+  read(unitbin) b2(:,:,:)
+  read(unitbin) b3(:,:,:)
+  read(unitbin) bp(:,:,:)
   read(unitbin)  p(:,:,:)
   close(unitbin)
   
@@ -110,6 +120,7 @@ subroutine Vorticity
 
   if(.not. is_inited)then
      allocate( vor(in,jn,kn))
+     allocate( jcd(in,jn,kn))
      is_inited = .true.
   endif
 
@@ -119,7 +130,11 @@ subroutine Vorticity
      vor(i,j,k)= (v2(i  ,j,k)-v2(i-1,j,k))/dx*0.5 &
                &+(v2(i+1,j,k)-v2(i  ,j,k))/dx*0.5 &
                &-(v1(i,j  ,k)-v1(i,j-1,k))/dy*0.5 &
-               &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5 
+               &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5
+     jcd(i,j,k)= (b2(i  ,j,k)-b2(i-1,j,k))/dx*0.5 &
+               &+(b2(i+1,j,k)-b2(i  ,j,k))/dx*0.5 &
+               &-(b1(i,j  ,k)-b1(i,j-1,k))/dy*0.5 &
+               &-(b1(i,j+1,k)-b1(i,j  ,k))/dy*0.5 
   enddo
   enddo
 
@@ -131,7 +146,7 @@ subroutine Vorticity
   write(unitvor,*) "# x y omega_z"
   do j=js,je
   do i=is,ie
-     write(unitvor,'(3(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k)
+     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k)
   enddo
      write(unitvor,*)
   enddo

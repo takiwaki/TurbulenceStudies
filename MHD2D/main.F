@@ -116,19 +116,24 @@
       use commons
       implicit none
       integer::i,j,k
-      real(8)::gamma_eos,B0
       real(8)::pi
       real(8),parameter::k_ini=10.0d0
+
       real(8),dimension(in,jn,kn)::psi1b,psi2b
+
       integer::seedsize
       integer,allocatable:: seed(:)
       real(8)::x
 
       real(8)::amp=1.0d-1
+      real(8)::ampb=0.0d0
+
+      call random_seed(size=seedsize)
+      write(6,*)"seed size",seedsize
+      allocate(seed(seedsize))  
+      call random_seed(get=seed)
 
       pi=acos(-1.0d0)
-
-      B0 = 1.0d0/gam
 
       d(:,:,:) = 1.0d0
 
@@ -150,8 +155,8 @@
          call random_number(x)
          v1(i,j,k) =  (psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
          v2(i,j,k) = -(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b1(i,j,k) =  (psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         b2(i,j,k) = -(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         b1(i,j,k) =  ampb*(psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         b2(i,j,k) = -ampb*(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
           p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
          v3(i,j,k) = 0.0d0
          b3(i,j,k) = 0.0d0
@@ -328,7 +333,7 @@
       enddo
       enddo
 
-      dt = 0.025d0 * dtmin
+      dt = 0.05d0 * dtmin
 
       return
       end subroutine TimestepControl
@@ -487,7 +492,7 @@
      &                        -leftpr(nve3,i,j,k)*leftpr(nbm1,i,j,k)
          leftco(mfbp,i,j,k) = 0.0d0  ! psi
      
-         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))**2
+         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))
          cts =  css  !c_s^2*c_a^2
      &                       +( leftpr(nbm1,i,j,k)**2
      &                         +leftpr(nbm2,i,j,k)**2
@@ -545,11 +550,12 @@
          rigtco(mfbw,i,j,k) =  rigtpr(nbm3,i,j,k)*rigtpr(nve1,i,j,k)
      &                        -rigtpr(nve3,i,j,k)*rigtpr(nbm1,i,j,k)
          rigtco(mfbp,i,j,k) = 0.0d0  ! b_z
-         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))**2
+         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))
          cts =  css  !c_s^2*c_a^2
      &                       +( rigtpr(nbm1,i,j,k)**2
      &                         +rigtpr(nbm2,i,j,k)**2
      &                         +rigtpr(nbm3,i,j,k)**2)/rigtpr(nden,i,j,k) 
+
 
          rigtco(mcsp,i,j,k)= sqrt((cts +sqrt(cts**2 
      &                             -4.0d0*css*rigtpr(nbm1,i,j,k)**2
@@ -565,8 +571,8 @@
       do i=is,ie+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
-         call HLLE(leftst,rigtst,nflux)
-!         call HLLC(leftst,rigtst,nflux)
+!         call HLLE(leftst,rigtst,nflux)
+         call HLLC(leftst,rigtst,nflux)
          nflux1(mden,i,j,k)=nflux(mden)
          nflux1(mrv1,i,j,k)=nflux(mrvu)
          nflux1(mrv2,i,j,k)=nflux(mrvv)
@@ -662,7 +668,7 @@
      &                        -leftpr(nve3,i,j,k)*leftpr(nbm2,i,j,k)
          leftco(mfbp,i,j,k) = 0.0d0  ! psi
      
-         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))**2
+         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))
          cts =  css  !c_s^2*c_a^2
      &                       +( leftpr(nbm1,i,j,k)**2
      &                         +leftpr(nbm2,i,j,k)**2
@@ -717,7 +723,7 @@
      &                        -rigtpr(nve3,i,j,k)*rigtpr(nbm2,i,j,k)
          rigtco(mfbp,i,j,k) = 0.0d0  ! psi
      
-         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))**2
+         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))
          cts =  css  !c_s^2*c_a^2
      &                       +( rigtpr(nbm1,i,j,k)**2
      &                         +rigtpr(nbm2,i,j,k)**2
@@ -737,8 +743,8 @@
       do j=js,je+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
-         call HLLE(leftst,rigtst,nflux)
-!         call HLLC(leftst,rigtst,nflux)
+!         call HLLE(leftst,rigtst,nflux)
+         call HLLC(leftst,rigtst,nflux)
          nflux2(mden,i,j,k)=nflux(mden)
          nflux2(mrv1,i,j,k)=nflux(mrvw)
          nflux2(mrv2,i,j,k)=nflux(mrvu) ! mrv2=3, mrvu=2
@@ -808,6 +814,7 @@
      &                 , mfdn,mfvu,mfvv,mfvw,mfet
      &                 , mcsp,mvel,mpre
      &                 , mden,mrvu,mrvv,mrvw,meto
+     &                 , mbmu,mbmv,mbmw,mbps
 
       implicit none
       real(8),dimension(2*mflx+madd),intent(in)::leftst,rigtst
@@ -979,6 +986,12 @@
         nflux(mrvw) = (frzl+msl*(rzlst-rzl))*maxs1 
      &               +(frzr+msr*(rzrst-rzr))*mins1
 
+! ADHOC
+        nflux(mbmu) = 0.0d0
+        nflux(mbmv) = 0.0d0
+        nflux(mbmw) = 0.0d0
+        nflux(mbps) = 0.0d0
+
       return
       end subroutine HLLC
 
@@ -1007,7 +1020,6 @@
      & +(- nflux2(mrv1,i,j+1,k)
      &   + nflux2(mrv1,i,j  ,k))/(x2a(j+1)-x2a(j)) 
      &      )
-
          mv2(i,j,k) = mv2(i,j,k) 
      & +dt*(
      &  (- nflux1(mrv2,i+1,j,k)
@@ -1219,7 +1231,6 @@
 
       return
       end subroutine Output
-
 
       subroutine makedirs(outdir)
       character(len=*), intent(in) :: outdir
