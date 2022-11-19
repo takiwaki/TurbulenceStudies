@@ -7,14 +7,14 @@ The character of the turbulence depends on the dimension and magnetic fields (se
 
 The meaning of the variables are as follows. The subscipt $k$ infer the wave number dependence, i.e., those are spectrum.
 
- | Variables | meaning |
- |---------- | ------- | 
- | $E_k$      | kinetic energy | 
- | $\Omega_k$ | enstropy       | 
- | $H_k^C$    | cross helicity   | 
- | $A_k$      | magnetic potential | 
- | $H_k$      | kinetic helicity | 
- | $H_k^M$    | helicity   | 
+ | Variables | meaning |  | 
+ |---------- | ------- | ------- | 
+ | $E_k$      | kinetic energy |  | 
+ | $\Omega_k$ | enstropy       | $\Omega = \nabla \times v$ | 
+ | $H_k^C$    | cross helicity   | $ v \cdot B $ | 
+ | $A_k$      | magnetic potential | $ B =\nabla \psi $, $ A =\psi^2 $  | 
+ | $H_k$      | kinetic helicity | $ v \cdot \nabla \times v$ | 
+ | $H_k^M$    | helicity   | $A \cdot B $ | 
  
 # Summary
 
