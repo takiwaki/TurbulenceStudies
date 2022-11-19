@@ -1,13 +1,15 @@
-dird := meddata
+dird := bindata
+dira := output
 dirf := figures
 dirm := movies
 
 MOVIES := ${dirm}/anidnx.mp4
 
-XSS= ${dird}/Sc00001.xss $(shell ls ${dird}/Sc*.xss)
-DNPNG=$(patsubst ${dird}/Sc%.xss,${dirf}/dnx%.png,$(XSS))
+BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
+VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
 
-exe=simplehyd.x
+exe=Simulation.x
+ana=Analysis.x
 
 all: ${exe} ${MOVIES}
 
@@ -23,23 +25,41 @@ ${dirm}/anidnx.mp4: MakeMovie.sh ${DNPNG} Init.sh
 #################
 # gnuplot
 #################
+${VORPNG}: vor.plt MakeSnap.sh ${VOR}
+	rm -fr ${dirf}/vor*.png
+	./MakeSnap.sh vor.plt
 
-${DNPNG}: dn2dx.plt MakeSnap.sh ${XSS} Init.sh
-	./Init.sh
-	rm -fr ${dirf}/dnx*.png
-	./MakeSnap.sh
+${VOR}: ${ana} ${BIN} control.dat
+	rm -fr ${dira}/vor*.dat
+	./${ana}
 
-${XSS}: ${exe} Init.sh
+
+#################
+# simulation
+#################
+
+control.dat: Init.sh ${BIN}
 	./Init.sh
-	rm -fr ${dird}/Sc*.xss
+
+${BIN}: ${exe}
+	rm -fr ${dird}/unf*.dat
+	rm -fr ${dird}/bin*.dat
 	./${exe}
 
+
+#################
+# Fortran
+#################
+
 fc=ifort -extend-source
-#fopt=-g -traceback -O2
-fopt=-g -traceback -check all -fpe0
+fopt=-g -traceback -O2
+#fopt=-g -traceback -check all -fpe0
 
 ${exe}: main.F
 	${fc} ${fopt} $< -o ${exe}
+
+${ana}: dataanalysis.f90
+	${fc} ${fopt} $< -o ${ana}
 
 #################
 # clean up
@@ -48,4 +68,4 @@ clean:
 	rm -f ${exe} *.o *.mod *~
 
 allclean:
-	rm -f ${dirm}/*.wmv ${dirf}/*.png ${dird}/*.xss
+	rm -fr ${dirm} ${dirf} ${dird} ${dirf}

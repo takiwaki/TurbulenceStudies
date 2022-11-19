@@ -1173,6 +1173,7 @@
       integer,parameter::unitout=13
       integer,parameter::unitbin=13
       integer::gs=1
+      integer::nvar=9
 
       logical, save:: is_inited
       data is_inited /.false./
