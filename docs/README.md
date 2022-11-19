@@ -9,15 +9,18 @@ The meaning of the variables are as follows. The subscipt $k$ infer the wave num
 
  | Variables | meaning |  | 
  |---------- | ------- | ------- | 
- | $E_k$      | kinetic energy |  | 
- | $\Omega_k$ | enstropy       | $\Omega = \nabla \times v$ | 
- | $H_k^C$    | cross helicity   | $ v \cdot B $ | 
- | $A_k$      | magnetic potential | $ B =\nabla \psi $, $ A =\psi^2 $  | 
- | $H_k$      | kinetic helicity | $ v \cdot \nabla \times v$ | 
- | $H_k^M$    | helicity   | $A \cdot B $ | 
+ | $E_k$      | kinetic energy | $\rho \vec{v}^2$ | 
+ | $\Omega_k$ | enstropy       | $ \Omega = \vec{\nabla} \times \vec{v}$ | 
+ | $H_k^C$    | cross helicity   | $ \vec{v} \cdot \vec{B} $ | 
+ | $A_k$      | magnetic potential | $ \vec{B} = \vec{\nabla} \psi $, $ A =\psi^2 $  | 
+ | $H_k$      | kinetic helicity | $ \vec{v} \cdot \vec{\nabla} \times \vec{v}$ | 
+ | $H_k^M$    | helicity   | $\vec{A} \cdot \vec{B} $ | 
  
 # Summary
 
 # Details
 
-[2D hydrodynamic simulation](./HYD2D.md)
+[2D hydrodynamic simulation](./HYD2D.md)  
+[2D magneto-hydrodynamic simulation](./MHD2D.md)  
+[3D hydrodynamic simulation](./HYD3D.md)  
+[3D magneto-hydrodynamic simulation](./MHD3D.md)  
