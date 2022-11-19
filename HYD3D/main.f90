@@ -63,6 +63,7 @@
          call StateVevtor
          call NumericalFlux1
          call NumericalFlux2
+         call NumericalFlux3
          call UpdateConsv
          call PrimVariable
          time=time+dt
@@ -129,9 +130,9 @@
 
       pi=acos(-1.0d0)
 
-      Ahl = 1.0d0
-      Bhl = 1.0d0
-      Chl = 1.0d0
+      Ahl = 1.0d-1
+      Bhl = 1.0d-1
+      Chl = 1.0d-1
 
       d(:,:,:) = 1.0d0
 
@@ -613,6 +614,114 @@
 
       return
       end subroutine Numericalflux2
+
+
+      subroutine NumericalFlux3
+      use commons, only: is,ie,in,js,je,jn,ks,ke,kn,gam
+      use fluxmod
+      implicit none
+      integer::i,j,k
+      real(8),dimension(nhyd):: dsvp,dsvm,dsvc,dsv
+      real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
+      real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
+      real(8),dimension(2*mflx+madd):: leftst,rigtst
+      real(8),dimension(mflx):: nflux
+
+      do j=js,je
+      do i=is,ie
+      do k=ks-1,ke+1
+         dsvp(:) = (svc(:,i,j,k+1) -svc(:,i,j,k)                 )
+         dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j,k-1))
+
+         call vanLeer(dsvp,dsvm,dsv)
+!         call minmod(dsvp,dsvm,dsv)
+         leftpr(:,i,j,k+1) = svc(:,i,j,k) + 0.5d0*dsv(:)
+         rigtpr(:,i,j,k  ) = svc(:,i,j,k) - 0.5d0*dsv(:)
+
+       enddo
+       enddo
+       enddo
+
+      do j=js,je
+      do i=is,ie
+      do k=ks,ke+1
+         leftco(mudn,i,j,k)=leftpr(nden,i,j,k)
+         leftco(muvv,i,j,k)=leftpr(nve1,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muvw,i,j,k)=leftpr(nve2,i,j,k)*leftpr(nden,i,j,k) ! rho v
+         leftco(muvu,i,j,k)=leftpr(nve3,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muet,i,j,k)=leftpr(nene,i,j,k)*leftpr(nden,i,j,k) &
+     &               +0.5d0*leftpr(nden,i,j,k)*(                  &
+     &                     +leftpr(nve1,i,j,k)**2                 &
+     &                     +leftpr(nve2,i,j,k)**2                 &
+     &                     +leftpr(nve3,i,j,k)**2)
+
+         leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve3,i,j,k) ! rho v
+         leftco(mfvv,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve3,i,j,k)
+         leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve3,i,j,k)
+         leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve3,i,j,k) &
+     &                     +leftpr(npre,i,j,k)
+         leftco(mfet,i,j,k)=(leftpr(nene,i,j,k)*leftpr(nden,i,j,k) &
+     &               +0.5d0*leftpr(nden,i,j,k)*(                   &
+     &                     +leftpr(nve1,i,j,k)**2                  &
+     &                     +leftpr(nve2,i,j,k)**2                  &
+     &                     +leftpr(nve3,i,j,k)**2)                 &
+     &                     +leftpr(npre,i,j,k)                     &
+     &                                       )*leftpr(nve3,i,j,k)
+
+         leftco(mcsp,i,j,k)= sqrt(gam*(gam-1.0d0)*leftpr(nene,i,j,k))
+         leftco(mvel,i,j,k)= leftpr(nve3,i,j,k)
+         leftco(mpre,i,j,k)= leftpr(npre,i,j,k)
+
+
+         rigtco(mudn,i,j,k)=rigtpr(nden,i,j,k)
+         rigtco(muvv,i,j,k)=rigtpr(nve1,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muvw,i,j,k)=rigtpr(nve2,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muvu,i,j,k)=rigtpr(nve3,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muet,i,j,k)=rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) &
+     &               +0.5d0*rigtpr(nden,i,j,k)*(                  &
+     &                     +rigtpr(nve1,i,j,k)**2                 &
+     &                     +rigtpr(nve2,i,j,k)**2                 &
+     &                     +rigtpr(nve3,i,j,k)**2)
+
+         rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve3,i,j,k)
+         rigtco(mfvv,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve3,i,j,k)
+         rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve3,i,j,k)
+         rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve3,i,j,k) &
+     &                     +rigtpr(npre,i,j,k)
+         rigtco(mfet,i,j,k)=(rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) &
+     &               +0.5d0*rigtpr(nden,i,j,k)*(                   &
+     &                     +rigtpr(nve1,i,j,k)**2                  &
+     &                     +rigtpr(nve2,i,j,k)**2                  &
+     &                     +rigtpr(nve3,i,j,k)**2)                 &
+     &                     +rigtpr(npre,i,j,k)                     & 
+     &                                       )*rigtpr(nve3,i,j,k)
+
+         rigtco(mcsp,i,j,k)= sqrt(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))
+         rigtco(mvel,i,j,k)= rigtpr(nve3,i,j,k)
+         rigtco(mpre,i,j,k)= rigtpr(npre,i,j,k)
+
+      enddo
+      enddo
+      enddo
+
+      do j=js,je
+      do i=is,ie
+      do k=ks,ke+1
+         leftst(:)=leftco(:,i,j,k)
+         rigtst(:)=rigtco(:,i,j,k)
+!         call HLLE(leftst,rigtst,nflux)
+         call HLLC(leftst,rigtst,nflux)
+         nflux3(mden,i,j,k)=nflux(mden)
+         nflux3(mrv1,i,j,k)=nflux(mrvv)
+         nflux3(mrv2,i,j,k)=nflux(mrvw)
+         nflux3(mrv3,i,j,k)=nflux(mrvu)
+         nflux3(meto,i,j,k)=nflux(meto)
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine Numericalflux3
 
       subroutine HLLE(leftst,rigtst,nflux)
       use fluxmod
