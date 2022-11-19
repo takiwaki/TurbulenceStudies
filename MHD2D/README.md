@@ -20,6 +20,7 @@ $$ \psi \propto \sin(2\pi k x)\sin(2\pi k y).$$
 Initial velocity and magnetic fields are set from $\psi$.
 
 $$ v_x = v_0 \partial_y \psi, v_y = - v_0 \partial_x \psi, $$
+
 $$ B_x = B_0 \partial_y \psi, B_y = - B_0 \partial_x \psi, $$
 
 ## analysis
@@ -27,6 +28,7 @@ $$ B_x = B_0 \partial_y \psi, B_y = - B_0 \partial_x \psi, $$
 Animation of vorticity and current density are made.
 
 $$ \omega =  \partial_x v_y - \partial_y v_x $$
+
 $$ j =  \partial_x B_y - \partial_y B_x $$
 
 The spectrum of kinetic energy and enstropy is calculated. First 2D Fourier transformation is given.
