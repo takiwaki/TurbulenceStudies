@@ -1,6 +1,6 @@
 # 2D hydrodynamic turbulence
 
-[Go to top](./README.md)  
+[Go to summary](./README.md)  
 
 ## initial condition
 stream function is given.
