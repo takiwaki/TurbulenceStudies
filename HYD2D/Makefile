@@ -3,62 +3,64 @@ dira := output
 dirf := figures
 dirm := movies
 
-MOVIES := ${dirm}/anivor.mp4
-
-BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
-VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
-VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
-
 exe=Simulation.x
 ana=Analysis.x
+count=control.dat
 
-all: ${exe} ${MOVIES}
+#################
+# complile options
+#################
+fc=ifort -extend-source
+fopt=-g -traceback -O2
+#fopt=-g -traceback -check all -fpe0
+
+all: movie spectrum
 
 .PHONY: all clean allclean
 
 #################
 # ffmpeg
 #################
-${dirm}/anivor.mp4: MakeMovie.sh ${VORPNG}
+movie: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
 
 #################
 # gnuplot
 #################
 
-${VORPNG}: vor.plt MakeSnap.sh ${VOR}
-	rm -fr ${dirf}/vor*.png
+spectrum: spectrum.plt
+	gnuplot spectrum.plt
+
+2Dsnaps: vor.plt MakeSnap.sh
 	./MakeSnap.sh vor.plt
 
 #################
 # analysis
 #################
 
-${VOR}: ${ana} ${BIN} control.dat
-	rm -fr ${dira}/vor*.dat
+analysis-code: ${ana} 
+
+count-number: ${count}
+
+run-analysis: ${ana} ${count}
 	./${ana}
 
-control.dat: Init.sh ${BIN}
+${count}: Init.sh
 	./Init.sh
 
 #################
 # simulation
 #################
 
-${BIN}: ${exe}
-	rm -fr ${dird}/unf*.dat
-	rm -fr ${dird}/bin*.dat
+run: ${exe}
 	./${exe}
 
+simulation-code: ${exe} 
 
-fc=ifort -extend-source
-fopt=-g -traceback -O2
-#fopt=-g -traceback -check all -fpe0
-
-${ana}: dataanalysis.f90
+${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
 
-${exe}: main.f90
+${exe}: Simulation.f90
 	${fc} ${fopt} $< -o ${exe}
 
 #################
@@ -68,4 +70,4 @@ clean:
 	rm -f ${exe} ${ana} *.o *.mod *~
 
 allclean:
-	rm -fr ${dirm} ${dirf} ${dird} ${dirf}
+	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${count}
