@@ -1443,7 +1443,7 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
-            css  = (gam*svc(npre,i,j,k)/ svc(nden,i,j,k))**2
+            css  = (gam*svc(npre,i,j,k)/ svc(nden,i,j,k))
             cts  = css  &! cs^2+c_a^2
      &          + (svc(nbm1,i,j,k)**2+svc(nbm2,i,j,k)**2+svc(nbm3,i,j,k)**2)/svc(nden,i,j,k)
             cms  = sqrt((cts +sqrt(cts**2 &
