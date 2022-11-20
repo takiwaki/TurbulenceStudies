@@ -26,16 +26,24 @@ To analyze the data, let us make `Analysis.x`.
 Now you have many time-snapshots of data. To count it, use a script.
     
     make count-number
-    
+   
+See the file, `cat control.dat`. You can know the number of files.
 Then preparation is done. Run the analyis.
     
     make run-analysis
     
+The output is saved in `output/`.
 ### 2D plots
 If you need 2D snapshots. 
     
     make 2Dsnaps
-    
+   
+   
+### spectrum
+To obtain the spectrum
+   
+      make spectrum
+      
 ## Initial condition
 stream function is given.
 
