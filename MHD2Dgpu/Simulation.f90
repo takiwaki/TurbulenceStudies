@@ -66,6 +66,7 @@
      &                          ,mbmu=mubu,mbmv=mubv,mbmw=mubw
       real(8),dimension(mflx,in,jn,kn):: nflux1,nflux2,nflux3
 
+!$acc declare create(chg)
 !$acc declare create(svc,nflux1,nflux2,nflux3)
       
       end module fluxmod
@@ -286,8 +287,7 @@
       integer::i,j,k
 
 !$acc kernels      
-!$acc loop independent
-      
+!$acc loop independent 
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -306,7 +306,6 @@
       enddo
       enddo
       enddo
-      
 !$acc end kernels
       return
       end subroutine Consvvariable
@@ -315,8 +314,6 @@
       use commons
       implicit none
       integer::i,j,k
-
-      
 !$acc kernels      
 !$acc loop independent
       do k=ks,ke
@@ -341,7 +338,6 @@
       enddo
       enddo
       enddo
-
 !$acc end kernels
       return
       end subroutine PrimVariable
@@ -356,11 +352,9 @@
       real(8)::dtmin
       real(8)::ctot
       integer::i,j,k
-      dtmin=1.0d90
-
 !$acc kernels    
+      dtmin=1.0d90
 !$acc loop reduction(min:dtmin)  
-      
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -379,7 +373,6 @@
       enddo
 
       dt = 0.05d0 * dtmin
-
 !$acc end kernels
 !$acc update host (dt)
       return
@@ -633,7 +626,6 @@
 
 !$acc kernels
 !$acc loop independent
-      
       do k=ks,ke
       do j=js,je
       do i=is,ie+1
@@ -1524,16 +1516,16 @@
       real(8):: cts,css,cms
       real(8),parameter:: huge=1.0d90 
 
+!$acc kernels
       chd = 0.0d0
       ch1l = 0.0d0; ch2l = 0.0d0; ch3l = 0.0d0
       dhd = huge
-      dh1l =  huge; dh2l =  huge; dh3l =  huge
-!$acc kernels    
+      dh1l =  huge; dh2l =  huge; dh3l =  huge      
 !$acc loop reduction(max:chd)
       do k=ks,ke
       do j=js,je
       do i=is,ie
-            css  = (gam*svc(npre,i,j,k)/ svc(nden,i,j,k))**2
+            css  = (gam*svc(npre,i,j,k)/ svc(nden,i,j,k))
             cts  = css  &! cs^2+c_a^2
      &          + (svc(nbm1,i,j,k)**2+svc(nbm2,i,j,k)**2+svc(nbm3,i,j,k)**2)/svc(nden,i,j,k)
             cms  = sqrt((cts +sqrt(cts**2 &
