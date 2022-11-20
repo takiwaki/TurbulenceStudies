@@ -21,7 +21,7 @@ all: movie spectrum
 #################
 # ffmpeg
 #################
-movie: MakeMovie.sh ${VORPNG}
+movie: MakeMovie.sh 2Dsnaps
 	./MakeMovie.sh vor
 
 #################
@@ -31,7 +31,7 @@ movie: MakeMovie.sh ${VORPNG}
 spectrum: spectrum.plt
 	gnuplot spectrum.plt
 
-2Dsnaps: vor.plt MakeSnap.sh
+2Dsnaps: vor.plt MakeSnap.sh run-analysis
 	./MakeSnap.sh vor.plt
 
 #################
@@ -42,7 +42,7 @@ analysis-code: ${ana}
 
 count-number: ${count}
 
-run-analysis: ${ana} ${count}
+run-analysis: ${ana} ${count} run
 	./${ana}
 
 ${count}: Init.sh
