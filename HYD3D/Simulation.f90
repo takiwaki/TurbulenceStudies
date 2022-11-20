@@ -56,7 +56,7 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-      do nhy=1,80000
+      do nhy=1,10000
          if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call TimestepControl
          call BoundaryCondition
