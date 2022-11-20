@@ -33,16 +33,25 @@ Then preparation is done. Run the analyis.
     make run-analysis
     
 The output is saved in `output/`.
-### 2D plots
+### 2D plots and animation.
 If you need 2D snapshots. 
     
     make 2Dsnaps
    
+Using `output/vor*.dat, image files are made and save as `figures/vor*.png`.
+
+    make movie
    
+
 ### spectrum
 To obtain the spectrum
    
       make spectrum
+      
+### Do all of them
+To do all in one command, you just type `make` or `make all`.
+   
+      make all
       
 ## Initial condition
 stream function is given.
