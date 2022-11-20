@@ -38,10 +38,12 @@ If you need 2D snapshots.
     
     make 2Dsnaps
    
-Using `output/vor*.dat, image files are made and save as `figures/vor*.png`.
+Using `output/vor*.dat`, image files are made and save as `figures/vor*.png`.
+To make movie from the files. Type as follows.
 
     make movie
    
+The movie files in saved in `movie/anivor`.
 
 ### spectrum
 To obtain the spectrum
