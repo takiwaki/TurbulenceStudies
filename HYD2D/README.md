@@ -3,15 +3,39 @@
 [Go to top](../README.md)  
 
 ## How to run
-To run the code, you just type `make`.
+
+### compile 
+To run the code, you need to compile 'Simulation.f90'.
     
-    make
+    make simulation-code
     
-Then `Simulation.x`is compiled and automatically executed.
+Then `Simulation.x`is made in this directory.
+
+### run
+Let's run the code.
+    
+    make run
+    
 The simulation data is saved in `bindata/`.
 
-The data is binary file, to make figures analyis is done by `Analysis.x`.
-
+### analysis
+To analyze the data, let us make `Analysis.x`.
+    
+    make analysis-code
+    
+Now you have many time-snapshots of data. To count it, use a script.
+    
+    make count-number
+    
+Then preparation is done. Run the analyis.
+    
+    make run-analysis
+    
+### 2D plots
+If you need 2D snapshots. 
+    
+    make 2Dsnaps
+    
 ## Initial condition
 stream function is given.
 
