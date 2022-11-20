@@ -3,8 +3,6 @@ dira := output
 dirf := figures
 dirm := movies
 
-MOVIES := ${dirm}/anivor.mp4
-
 BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
 VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
 VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
@@ -12,53 +10,78 @@ VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 exe=Simulation.x
 ana=Analysis.x
 
-all: ${exe} ${MOVIES}
+countfile=control.dat
+moviefile=${dirm}/anivor.mp4
+specfile=k-E_k.png
+
+#################
+# complile options
+#################
+fc=ifort -extend-source
+fopt=-g -traceback -O2
+#fopt=-g -traceback -check all -fpe0
+
+all: ${exe} ${moviefile}
 
 .PHONY: all clean allclean
 
 #################
 # ffmpeg
 #################
-${dirm}/anivor.mp4: MakeMovie.sh ${VORPNG}
+
+movie: ${moviefile}
+
+${moviefile}: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
 
 #################
 # gnuplot
 #################
 
+spectrum: ${specfile}
+
+${specfile}: spectrum.plt
+	gnuplot spectrum.plt
+
+2Dsnaps: ${VORPNG}
+
 ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
-	rm -fr ${dirf}/vor*.png
 	./MakeSnap.sh vor.plt
 
 #################
 # analysis
 #################
 
-${VOR}: ${ana} ${BIN} control.dat
-	rm -fr ${dira}/vor*.dat
+analysis-code: ${ana} 
+
+count-number: ${countfile}
+
+run-analysis: ${ana} ${count}
 	./${ana}
 
-control.dat: Init.sh ${BIN}
+${countfile}: Init.sh
 	./Init.sh
+
+${VOR}: ${ana} ${BIN} ${countfile}
+	./${ana}
 
 #################
 # simulation
 #################
 
+run: ${BIN}
+	./${exe}
+
 ${BIN}: ${exe}
-	rm -fr ${dird}/unf*.dat
-	rm -fr ${dird}/bin*.dat
 	./${exe}
 
 
-fc=ifort -extend-source
-fopt=-g -traceback -O2
-#fopt=-g -traceback -check all -fpe0
+simulation-code: ${exe} 
 
-${ana}: dataanalysis.f90
+${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
 
-${exe}: main.f90
+${exe}: Simulation.f90
 	${fc} ${fopt} $< -o ${exe}
 
 #################
@@ -68,4 +91,4 @@ clean:
 	rm -f ${exe} ${ana} *.o *.mod *~
 
 allclean:
-	rm -fr ${dirm} ${dirf} ${dird} ${dirf}
+	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${count}
