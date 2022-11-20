@@ -3,9 +3,16 @@ dira := output
 dirf := figures
 dirm := movies
 
+BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
+VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+
 exe=Simulation.x
 ana=Analysis.x
-count=control.dat
+
+countfile=control.dat
+moviefile=${dirm}/anivor.mp4
+specfile=k-E_k.png
 
 #################
 # complile options
@@ -14,24 +21,31 @@ fc=ifort -extend-source
 fopt=-g -traceback -O2
 #fopt=-g -traceback -check all -fpe0
 
-all: movie spectrum
+all: ${exe} ${moviefile}
 
 .PHONY: all clean allclean
 
 #################
 # ffmpeg
 #################
-movie: MakeMovie.sh 2Dsnaps
+
+movie: ${moviefile}
+
+${moviefile}: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
 
 #################
 # gnuplot
 #################
 
-spectrum: spectrum.plt
+spectrum: ${specfile}
+
+${specfile}: spectrum.plt
 	gnuplot spectrum.plt
 
-2Dsnaps: vor.plt MakeSnap.sh run-analysis
+2Dsnaps: ${VORPNG}
+
+${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
 
 #################
@@ -40,20 +54,27 @@ spectrum: spectrum.plt
 
 analysis-code: ${ana} 
 
-count-number: ${count}
+count-number: ${countfile}
 
-run-analysis: ${ana} ${count} run
+run-analysis: ${ana} ${count}
 	./${ana}
 
-${count}: Init.sh
+${countfile}: Init.sh
 	./Init.sh
+
+${VOR}: ${ana} ${BIN} ${countfile}
+	./${ana}
 
 #################
 # simulation
 #################
 
-run: ${exe}
+run: ${BIN}
 	./${exe}
+
+${BIN}: ${exe}
+	./${exe}
+
 
 simulation-code: ${exe} 
 
