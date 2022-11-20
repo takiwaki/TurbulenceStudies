@@ -7,4 +7,4 @@ You can perform 4 kinds of simulations.
 - [3D hydroynamic simulation](./HYD3D/)
 - [3D magneto-hydrodynamic simulation](./MHD3D/)
 
-The results are summarized [here](./docs/).
+The results are summarized [here](https://www.notion.so/Turbulent-Studies-e4836ad642684f8f992d54a1f7e22635).
