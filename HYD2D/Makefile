@@ -91,4 +91,4 @@ clean:
 	rm -f ${exe} ${ana} *.o *.mod *~
 
 allclean:
-	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${count}
+	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${countfile}
