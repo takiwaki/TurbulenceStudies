@@ -19,6 +19,10 @@ set style line 91 lt 1 lw 2 lc rgb "black" #
 set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
+
+ifnum=1
+inputinit= sprintf("output/spc%05d.dat",ifnum)
+
 ifnum=580
 input= sprintf("output/spc%05d.dat",ifnum)
 
@@ -40,7 +44,7 @@ set key right top
 
 plot NaN notitle \
 , input  u 1:2  notitle w l ls 1  \
-, 6*x**(-5.0/3.0) title "-5/3" w l ls 91
+, 6*x**(-3.0/2.0) title "-3/2" w l ls 91
 
 
 if(pngflag==1)set output "k-V_k.png"
@@ -63,7 +67,7 @@ set format y "10^{%L}"
 
 plot NaN notitle \
 , input  u 1:4  title "2D MHD" w l ls 1  \
-, 1.0e-7*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+, 5.0e-7*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
 
 if(pngflag==1)set output "k-C_k.png"
 set log 
@@ -75,7 +79,7 @@ set format y "10^{%L}"
 
 plot NaN notitle \
 , input  u 1:5  title "2D MHD" w l ls 1  \
-, 1.0e-3*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+, 1.0e-3*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
 
 
 reset

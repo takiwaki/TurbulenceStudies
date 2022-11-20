@@ -12,8 +12,10 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: b1,b2,b3,bp
     real(8),dimension(:,:,:),allocatable:: vor ! vorticity
     real(8),dimension(:,:,:),allocatable:: jcd ! current density
+    real(8),dimension(:,:,:),allocatable:: mpt ! magnetic potential
+    real(8),dimension(:,:,:),allocatable:: hcr ! cross helicity
     real(8):: dx,dy
-    real(8):: Etot,Vtot
+    real(8):: Etot,Vtot,Mtot,Ctot
 end module fieldmod
 
 program data_analysis
@@ -35,6 +37,8 @@ program data_analysis
      write(6,*) "file number",incr
      call ReadData
      call Vorticity
+     call Potential
+     call CrossHelicity
      call Fourier
      call Probability
   enddo FILENUMBER
@@ -156,16 +160,89 @@ subroutine Vorticity
 
   return
 end subroutine Vorticity
-  
+
+subroutine Potential
+  use fieldmod
+  implicit none
+  integer::i,j,k
+
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer,parameter::unitvor=231
+
+  logical,save:: is_inited
+  data is_inited / .false. /
+
+
+  if(.not. is_inited)then
+     allocate( mpt(in,jn,kn))
+     is_inited = .true.
+  endif
+ 
+
+  mpt(:,:,:)= 0.0d0
+
+  k=1
+  do j=js,je
+  do i=is+1,ie
+     mpt(i,j,k) = mpt(i-1,j,k)  + (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
+  enddo
+  enddo
+
+  do j=js+1,je
+  do i=is  ,ie
+     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
+  enddo
+  enddo
+
+  return
+end subroutine Potential
+
+subroutine CrossHelicity
+  use fieldmod
+  implicit none
+  integer::i,j,k
+
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer,parameter::unitvor=231
+
+  logical,save:: is_inited
+  data is_inited / .false. /
+
+
+  if(.not. is_inited)then
+     allocate( Hcr(in,jn,kn))
+     is_inited = .true.
+  endif
+ 
+
+  Hcr(:,:,:)= 0.0d0
+
+  k=1
+  do j=js,je
+  do i=is,ie
+     Hcr(i,j,k) =     v1(i,j,k) * b1(i,j,k) &
+                &  +  v2(i,j,k) * b2(i,j,k) &
+                &  +  v3(i,j,k) * b3(i,j,k)
+  enddo
+  enddo
+
+  return
+end subroutine CrossHelicity
+
+
 subroutine Fourier
   use fieldmod
   implicit none
   integer::i,j,k
   integer::ik,jk,kk,rk
   integer,parameter:: nk=100
-  real(8),dimension(nk,nk):: Ehat2Dc,Vhat2Dc,Ehat2Ds,Vhat2Ds
+  integer,parameter:: nvar=4
+  real(8),dimension(nvar):: X
+  real(8),dimension(nk,nk,nvar):: Xhat2Dc,Xhat2Ds
   real(8),dimension(nk):: kx,ky
-  real(8),dimension(nk):: Ehat1D,Vhat1D
+  real(8),dimension(nk,nvar):: Xhat1D
   real(8):: kr
   real(8):: dkx,dky,dkr
   character(20),parameter::dirname="output/"
@@ -190,6 +267,14 @@ subroutine Fourier
  &    + vor(i,j,k)**2                               & 
  &    *dx*dy
 
+     Mtot = Mtot &
+ &    + mpt(i,j,k)**2                               & 
+ &    *dx*dy
+
+     Ctot = Ctot &
+ &    + Hcr(i,j,k)                                  & 
+ &    *dx*dy
+
   enddo
   enddo
 
@@ -203,34 +288,26 @@ subroutine Fourier
      ky(jk) = jk *dky
   enddo
 
-  Ehat2Dc(:,:) = 0.0d0
-  Ehat2Ds(:,:) = 0.0d0
-  Vhat2Dc(:,:) = 0.0d0
-  Vhat2Ds(:,:) = 0.0d0
+  Xhat2Dc(:,:,:) = 0.0d0
+  Xhat2Ds(:,:,:) = 0.0d0
 
   do ik=1,nk
   do jk=1,nk
 
   do j=js,je
   do i=is,ie
-     Ehat2Dc(ik,jk) = Ehat2Dc(ik,jk) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  &
+     X(1) = 0.5d0*d(i,j,k)                          &
+ &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k)) 
+     X(2) = vor(i,j,k)**2
+     X(3) = mpt(i,j,k)**2
+     X(4) = hcr(i,j,k)
+
+     Xhat2Dc(ik,jk,1:nvar) = Xhat2Dc(ik,jk,1:nvar)  &
+ &    + X(1:nvar)                                   &
  &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
  &    *dx*dy
-     Ehat2Ds(ik,jk) = Ehat2Ds(ik,jk) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  &
- &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
-
-     Vhat2Dc(ik,jk) = Vhat2Dc(ik,jk) &
- &    + vor(i,j,k)**2                               &
- &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
-
-     Vhat2Ds(ik,jk) = Vhat2Ds(ik,jk) &
- &    + vor(i,j,k)**2                               &
+     Xhat2Ds(ik,jk,1:nvar) = Xhat2Ds(ik,jk,1:nvar)  &
+ &    + X(1:nvar)                                   &
  &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
  &    *dx*dy
 
@@ -240,14 +317,13 @@ subroutine Fourier
   enddo
   enddo
 
-  Ehat1D(:) = 0.0d0
+  Xhat1D(:,1:nvar) = 0.0d0
   dkr = dkx/sqrt(2.0d0) ! minimum k
   do ik=1,nk
   do jk=1,nk
      kr = sqrt(kx(ik)**2+ky(jk)**2)
      rk = min(nk,int(kr/dkr))
-     Ehat1D(rk) = Ehat1D(rk) + sqrt(Ehat2Dc(ik,jk)**2 + Ehat2Ds(ik,jk)**2)*dkx*dky
-     Vhat1D(rk) = Vhat1D(rk) + sqrt(Vhat2Dc(ik,jk)**2 + Vhat2Ds(ik,jk)**2)*dkx*dky 
+     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat2Dc(ik,jk,1:nvar)**2 + Xhat2Ds(ik,jk,1:nvar)**2)*dkx*dky 
   enddo
   enddo
 
@@ -256,7 +332,10 @@ subroutine Fourier
   open(unitspc,file=filename,status='replace',form='formatted')
   write(unitspc,*) "# ",time
   do rk=1,nk
-     write(unitspc,'(3(1x,E12.3))') rk*dkr,Ehat1D(rk)/Etot,Vhat1D(rk)/Vtot
+     write(unitspc,'(6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Etot &
+                                  &       ,Xhat1D(rk,2)/Vtot &
+                                  &       ,Xhat1D(rk,3)/Mtot &
+                                  &       ,Xhat1D(rk,4)/Ctot
   enddo
   close(unitspc)
 
