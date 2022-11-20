@@ -11,7 +11,24 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
     real(8),dimension(:,:,:),allocatable:: vor1,vor2,vor3
     real(8):: dx,dy,dz
-    real(8):: Etot,Vtot
+
+!$acc declare create(incr)
+!$acc declare create(time,dt)
+!$acc declare create(in,jn,kn)
+!$acc declare create(izone,jzone,kzone)
+!$acc declare create(igs,jgs,kgs)
+!$acc declare create(is,js,ks)
+!$acc declare create(ie,je,ke)
+      
+!$acc declare create(x1a,x1b)
+!$acc declare create(x2a,x2b)
+!$acc declare create(x3a,x3b)
+      
+!$acc declare create(d,v1,v2,v3,p)
+!$acc declare create(vor1,vor2,vor3)
+
+!$acc declare create(dx,dy,dz)
+
 end module fieldmod
 
 program data_analysis
@@ -34,7 +51,6 @@ program data_analysis
      call ReadData
      call Vorticity
      call Fourier
-     call Probability
   enddo FILENUMBER
 
   stop
@@ -99,6 +115,12 @@ subroutine ReadData
   dy = x2b(2)-x2b(1)
   dz = x3b(2)-x3b(1)
 
+!$acc update device (x1a,x1b)
+!$acc update device (x2a,x2b)
+!$acc update device (x3a,x3b)
+!$acc update device (d,v1,v2,v3,p)
+!$acc update device (dx,dy,dz)
+
   return
 end subroutine ReadData
 
@@ -118,9 +140,12 @@ subroutine Vorticity
      allocate( vor1(in,jn,kn))
      allocate( vor2(in,jn,kn))
      allocate( vor3(in,jn,kn))
+!$acc update device (vor1,vor2,vor3)
      is_inited = .true.
   endif
 
+!$acc kernels
+!$acc loop independent
   do k=ks,ke
   do j=js,je
   do i=is,ie
@@ -139,23 +164,7 @@ subroutine Vorticity
   enddo
   enddo
   enddo
-
-  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitvor,file=filename,status='replace',form='formatted')
-
-  k=1
-  write(unitvor,*) "# ",time
-  write(unitvor,*) "# x y omega_z"
-  do j=js,je
-  do i=is,ie
-     write(unitvor,'(3(1x,E12.3))') x1b(i),x2b(j),vor3(i,j,k)
-  enddo
-     write(unitvor,*)
-  enddo
-
-  close(unitvor)
-
+!$acc end kernels
 
   return
 end subroutine Vorticity
@@ -166,9 +175,12 @@ subroutine Fourier
   integer::i,j,k
   integer::ik,jk,kk,rk
   integer,parameter:: nk=100
-  real(8),dimension(nk,nk,nk):: Ehat3Dc,Vhat3Dc,Ehat3Ds,Vhat3Ds
+  integer,parameter:: nvar=2
+  real(8),dimension(nvar):: X
+  real(8),dimension(nvar):: Xtot
+  real(8),dimension(nk,nk,nk,2,nvar):: Xhat3D
   real(8),dimension(nk):: kx,ky,kz
-  real(8),dimension(nk):: Ehat1D,Vhat1D
+  real(8),dimension(nk,nvar):: Xhat1D
   real(8):: kr
   real(8):: dkx,dky,dkz,dkr
   character(20),parameter::dirname="output/"
@@ -178,23 +190,25 @@ subroutine Fourier
 
   pi=acos(-1.0d0)
 
-  Etot=0.0d0
-  Vtot=0.0d0
+
+!$acc kernels
+  Xtot(:)=0.0d0
+!$acc loop reduction(+:X)
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     Etot = Etot &
+     X(1) = X(1) &
  &    + 0.5d0*d(i,j,k)                              &
  &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k)+ v3(i,j,k)*v3(i,j,k))  & 
  &    *dx*dy*dz
 
-     Vtot = Vtot &
+     X(2) = X(2) &
  &    + vor3(i,j,k)**2                               & 
  &    *dx*dy*dz
-
   enddo
   enddo
   enddo
+!$acc end kernels
 
   dkx = 1.0d0/(dx*in)
   dky = 1.0d0/(dy*jn)
@@ -210,11 +224,10 @@ subroutine Fourier
      ky(kk) = kk *dkz
   enddo
 
-  Ehat3Dc(:,:,:) = 0.0d0
-  Ehat3Ds(:,:,:) = 0.0d0
-  Vhat3Dc(:,:,:) = 0.0d0
-  Vhat3Ds(:,:,:) = 0.0d0
+!$acc kernels
+  Xhat3D(:,:,:,:,:) = 0.0d0
 
+!$acc loop reduction(+:Xhat3D) private(X)
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk
@@ -222,25 +235,18 @@ subroutine Fourier
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     Ehat3Dc(ik,jk,kk) = Ehat3Dc(ik,jk,kk) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k) + v3(i,j,k)*v3(i,j,k))  &
- &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy*dz
-     Ehat3Ds(ik,jk,kk) = Ehat3Ds(ik,jk,kk) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k) + v3(i,j,k)*v3(i,j,k))  &
- &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
+     
+     X(1) =0.5d0*d(i,j,k)*(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k) + v3(i,j,k)*v3(i,j,k))
+     X(2) = v1(i,j,k)*vor1(i,j,k)+ v2(i,j,k)*vor2(i,j,k)+ v3(i,j,k)*vor3(i,j,k)
+
+     Xhat3D(ik,jk,kk,1,1:nvar) = Xhat3D(ik,jk,kk,1,1:nvar) &
+ &    + X(1:nvar) &
+ &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j)+kz(kk)*x3b(k) )) & 
  &    *dx*dy*dz
 
-     Vhat3Dc(ik,jk,kk) = Vhat3Dc(ik,jk,kk) &
- &    + vor3(i,j,k)**2                               &
- &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy*dz
-
-     Vhat3Ds(ik,jk,kk) = Vhat3Ds(ik,jk,kk) &
- &    + vor3(i,j,k)**2                               &
- &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
+     Xhat3D(ik,jk,kk,2,1:nvar) = Xhat3D(ik,jk,kk,2,1:nvar) &
+ &    + X(1:nvar) &
+ &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j)+kz(kk)*x3b(k) )) & 
  &    *dx*dy*dz
 
   enddo
@@ -250,70 +256,35 @@ subroutine Fourier
   enddo
   enddo
   enddo
+!$acc end kernels
 
-  Ehat1D(:) = 0.0d0
-  dkr = dkx/sqrt(2.0d0) ! minimum k
-  do ik=1,nk
+
+!$acc kernels
+  Xhat1D(:,:) = 0.0d0
+  dkr = dkx/sqrt(3.0d0) ! minimum k
+!$acc loop reduction(+:Xhat1D) 
+  do kk=1,nk
   do jk=1,nk
-     kr = sqrt(kx(ik)**2+ky(jk)**2)
+  do ik=1,nk
+     kr = sqrt(kx(ik)**2 +ky(jk)**2 +kz(kk)**2)
      rk = min(nk,int(kr/dkr))
-     Ehat1D(rk) = Ehat1D(rk) + sqrt(Ehat3Dc(ik,jk,kk)**2 + Ehat3Ds(ik,jk,kk)**2)*dkx*dky
-     Vhat1D(rk) = Vhat1D(rk) + sqrt(Vhat3Dc(ik,jk,kk)**2 + Vhat3Ds(ik,jk,kk)**2)*dkx*dky 
+     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat3D(ik,jk,kk,1,1:nvar)**2 & 
+ &                         +                      Xhat3D(ik,jk,kk,1,1:nvar)**2)*dkx*dky*dkz
   enddo
   enddo
+  enddo
+!$acc end kernels
+
+!$acc update host (Xhat1D)
 
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
   open(unitspc,file=filename,status='replace',form='formatted')
   write(unitspc,*) "# ",time
   do rk=1,nk
-     write(unitspc,'(3(1x,E12.3))') rk*dkr,Ehat1D(rk)/Etot,Vhat1D(rk)/Vtot
+     write(unitspc,'(3(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1),Xhat1D(rk,2)/Xtot(2)
   enddo
   close(unitspc)
 
   return
 end subroutine Fourier
-  
-subroutine Probability
-  use fieldmod
-  implicit none
-  integer::i,j,k,n
-  integer,parameter:: np=100
-  real(8),dimension(-np:np):: vxpro,vypro
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitpro=331
-  real(8):: vxmax, vymax
-
-  k=1
-  vxmax=0.0d0
-  vymax=0.0d0
-  do j=js,je
-  do i=is,ie
-     vxmax = max(vxmax, abs(v1(i,j,k)))
-     vymax = max(vymax, abs(v2(i,j,k)))
-  enddo
-  enddo
-
-  vxpro(:)= 0.0d0
-  vypro(:)= 0.0d0
-  do j=js,je
-  do i=is,ie 
-     n= min(np,max(-np,int(v1(i,j,k)*np/vxmax)))
-     vxpro(n) = vxpro(n) + dx*dy
-     n= min(np,max(-np,int(v2(i,j,k)*np/vymax)))
-     vypro(n) = vypro(n) + dx*dy
-  enddo
-  enddo
-
-  write(filename,'(a3,i5.5,a4)')"pro",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitpro,file=filename,status='replace',form='formatted')
-  write(unitpro,*) "# ",time
-  do n=-np,np
-     write(unitpro,'(4(1x,E12.3))') vxmax/np*n, vxpro(n), vymax/np*n, vypro(n)
-  enddo
-  close(unitpro)
-
-  return
-end subroutine Probability
