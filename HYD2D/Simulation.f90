@@ -3,6 +3,9 @@
       integer::nhy
       real(8)::time,dt
       data time / 0.0d0 /
+      real(8),parameter:: timemax=5.0d0
+      real(8),parameter:: dtout=5.0d0/600
+
       integer,parameter::ngrid=128
       integer,parameter::mgn=2
       integer,parameter::in=ngrid+2*mgn+1 &
@@ -55,8 +58,9 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-      do nhy=1,80000
-         if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
+                                  write(6,*)"step","time","dt"
+      mloop: do nhy=1,80000
+         if(mod(nhy,100) .eq. 0 ) write(6,*)nhy,time,dt
          call TimestepControl
          call BoundaryCondition
          call StateVevtor
@@ -66,7 +70,8 @@
          call PrimVariable
          time=time+dt
          call Output
-      enddo
+         if(time > timemax) exit mloop
+      enddo mloop
 
       write(6,*) "program has been finished"
       end program main
@@ -99,23 +104,17 @@
       use commons
       implicit none
       integer::i,j,k
-      real(8) :: rho1,rho2,Lsm,u1,u2
-      data rho1  /  1.0d0 /
-      data rho2  /  2.0d0 /
-      data u1    /  0.5d0 /
-      data u2    / -0.5d0 /
-      data Lsm   /  0.025d0 /
-
       real(8)::pi
       real(8),parameter::k_ini=10.0d0
 
-      real(8),dimension(in,jn,kn)::psi1b,psi2b
+      real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
+      real(8):: psinorm
 
       integer::seedsize
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8)::amp=1.0d-1
+      real(8):: v0 = 6.0d0
 
 
       call random_seed(size=seedsize)
@@ -124,17 +123,17 @@
       call random_seed(get=seed)
 
       pi=acos(-1.0d0)
+      psinorm = 1.0d0/(2.0d0*pi*k_ini)
 
       d(:,:,:) = 1.0d0
-
 
       do k=ks,ke
       do j=js,je+1
       do i=is,ie+1
-         psi1b(i,j,k) = amp * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                      * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         psi2b(i,j,k) = amp * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                      * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
+         vpsi1b(i,j,k) = psinorm * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
+     &                           * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
+         vpsi2b(i,j,k) = psinorm * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
+     &                           * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
       enddo
       enddo
       enddo
@@ -143,11 +142,14 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         call random_number(x)
-         v1(i,j,k) =  (psi1b(i,j+1,k)-psi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -(psi2b(i+1,j,k)-psi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
           p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
          v3(i,j,k) = 0.0d0
+         call random_number(x)
+         v1(i,j,k) = v1(i,j,k) *(1.0d0+1.0d-2*(x-0.5d0))
+         call random_number(x)
+         v2(i,j,k) = v2(i,j,k) *(1.0d0+1.0d-2*(x-0.5d0))
       enddo
       enddo
       enddo
@@ -162,7 +164,6 @@
       enddo
       enddo
       
-
       write(6,*)"initial profile is set"
       call BoundaryCondition
 
@@ -862,13 +863,16 @@
       character(20),parameter::dirname="bindata/"
       character(40)::filename
       real(8),save::tout
-      data tout / 0.0d0 / 
-      real(8),parameter:: dtout=1.0d-2
+      data tout / 0.0d0 /
       integer::nout
       data nout / 1 /
-      integer,parameter::unitout=13
-      integer,parameter::unitbin=13
-      integer::gs=1
+      integer,parameter:: unitout=17
+      integer,parameter:: unitbin=13
+      integer,parameter:: gs=1
+      integer,parameter:: nvar=5
+      real(8)::x1out(is-gs:ie+gs,2)
+      real(8)::x2out(js-gs:je+gs,2)
+      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks,nvar)
 
       logical, save:: is_inited
       data is_inited /.false./
@@ -878,9 +882,7 @@
          is_inited =.true.
       endif
 
-
       if(time .lt. tout+dtout) return
-
 
       write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
       filename = trim(dirname)//filename
@@ -891,16 +893,24 @@
       write(unitout,*) "# ",ngrid,gs
       close(unitout)
 
+      x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
+      x1out(is-gs:ie+gs,2) = x1a(is-gs:ie+gs)
+
+      x2out(is-gs:ie+gs,1) = x2b(is-gs:ie+gs)
+      x2out(is-gs:ie+gs,2) = x2a(is-gs:ie+gs)
+
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,1) =  d(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
+
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
       filename = trim(dirname)//filename
       open(unitbin,file=filename,status='replace',form='binary') 
-      write(unitbin)x1b(is-gs:ie+gs),x1a(is-gs:ie+gs)
-      write(unitbin)x2b(js-gs:je+gs),x2a(is-gs:ie+gs)
-      write(unitbin)  d(is-gs:ie+gs,js-gs:je+gs,ks)
-      write(unitbin) v1(is-gs:ie+gs,js-gs:je+gs,ks)
-      write(unitbin) v2(is-gs:ie+gs,js-gs:je+gs,ks)
-      write(unitbin) v3(is-gs:ie+gs,js-gs:je+gs,ks)
-      write(unitbin)  p(is-gs:ie+gs,js-gs:je+gs,ks)
+      write(unitbin) x1out(:,:)
+      write(unitbin) x2out(:,:)
+      write(unitbin) hydout(:,:,:,:)
       close(unitbin)
 
       write(6,*) "output:",nout,time
@@ -911,8 +921,8 @@
       return
       end subroutine Output
 
-
       subroutine makedirs(outdir)
+      implicit none
       character(len=*), intent(in) :: outdir
       character(len=256) command
       write(command, *) 'if [ ! -d ', trim(outdir), ' ]; then mkdir -p ', trim(outdir), '; fi'

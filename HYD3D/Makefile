@@ -9,6 +9,7 @@ VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 
 exe=Simulation.x
 ana=Analysis.x
+vis=Visualization.x
 
 countfile=control.dat
 moviefile=${dirm}/anivor.mp4
@@ -47,6 +48,17 @@ ${specfile}: spectrum.plt
 
 ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
+
+#################
+# visualization
+#################
+
+HDF5 = /home/takiwkkz/hdf5
+FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran 
+
+${vis}: Visualization.f90
+	${fc} ${fopt} ${FLAGHDF} $< -o ${vis}
+
 
 #################
 # analysis
@@ -92,3 +104,5 @@ clean:
 
 allclean:
 	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${count}
+
+
