@@ -1539,7 +1539,7 @@
       integer,parameter::unitout=17
       integer,parameter::unitbin=13
       integer,parameter:: gs=1
-      integer,parameter:: nvar=5
+      integer,parameter:: nvar=9
       real(8)::x1out(is-gs:ie+gs,2)
       real(8)::x2out(js-gs:je+gs,2)
       real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks,nvar)
@@ -1575,6 +1575,10 @@
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = b1(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = b2(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = b3(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = bp(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"

@@ -118,7 +118,7 @@
       real(8)::pi
 
       real(8)::Ahl,Bhl,Chl
-      real(8),parameter::k_ini=10.0d0
+      real(8),parameter::k_ini=4.0d0
       real(8),parameter::v0=6.0d0
 
       integer::seedsize
