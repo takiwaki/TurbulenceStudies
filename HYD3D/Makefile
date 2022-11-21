@@ -5,6 +5,7 @@ dirm := movies
 
 BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
 VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+SPC= $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
 VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 
 exe=Simulation.x
@@ -75,6 +76,9 @@ run-analysis: ${ana} ${count}
 
 ${countfile}: Init.sh
 	./Init.sh
+
+${SPC}: ${ana} ${BIN} ${countfile}
+	./${ana}
 
 
 #################
