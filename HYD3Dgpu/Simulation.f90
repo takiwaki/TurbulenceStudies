@@ -3,6 +3,9 @@
       integer::nhy
       real(8)::time,dt
       data time / 0.0d0 /
+      real(8),parameter:: timemax=5.0d0
+      real(8),parameter:: dtout=5.0d0/600
+      
       integer,parameter::ngrid=128
       integer,parameter::mgn=2
       integer,parameter::in=ngrid+2*mgn+1 &
@@ -71,7 +74,7 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-      do nhy=1,80000
+      mloop: do nhy=1,80000
          if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call TimestepControl
          call BoundaryCondition
@@ -83,7 +86,8 @@
          call PrimVariable
          time=time+dt
          call Output
-      enddo
+         if(time > timemax) exit mloop         
+      enddo mloop
 
       write(6,*) "program has been finished"
       end program main
@@ -134,6 +138,8 @@
 
       real(8)::Ahl,Bhl,Chl
       real(8),parameter::k_ini=4.0d0
+      real(8),parameter::v0=6.0d0
+      real(8),parameter::eps=1.0d-1
 
       integer::seedsize
       integer,allocatable:: seed(:)
@@ -158,19 +164,24 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
+         v1(i,j,k) = v0*(  Ahl*sin(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)) &
+   &                     + Chl*cos(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)))
+         v2(i,j,k) = v0*(  Bhl*sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
+   &                     + Ahl*cos(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)))
+         v3(i,j,k) = v0*(  Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
+   &                     + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)))
+          p(i,j,k) = 2.5d0
+
          call random_number(x)
-         v1(i,j,k) =   Ahl*sin(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)) &
-   &                 + Chl*cos(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
-         v2(i,j,k) =   Bhl*sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-   &                 + Ahl*cos(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min))
-         v3(i,j,k) =   Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
-   &                 + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min))
-          p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
+         v1(i,j,k) = v1(i,j,k)*(1.0d0+eps*(x-0.5d0))
+         call random_number(x)
+         v2(i,j,k) = v2(i,j,k)*(1.0d0+eps*(x-0.5d0))
+         call random_number(x)
+         v3(i,j,k) = v3(i,j,k)*(1.0d0+eps*(x-0.5d0))
       enddo
       enddo
       enddo
-
-
+   
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -459,9 +470,10 @@
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
 
 !$acc kernels      
-!$acc loop independent private(dsv,dsvp,dsvm)
+!$acc loop independent
       do k=ks,ke
       do j=js,je
+!$acc loop independent private(dsv,dsvp,dsvm)
       do i=is-1,ie+1
          dsvp(:) = (svc(:,i+1,j,k) -svc(:,i,j,k)                 )
          dsvm(:) = (                svc(:,i,j,k) - svc(:,i-1,j,k))
@@ -544,6 +556,7 @@
 !$acc loop independent
       do k=ks,ke
       do j=js,je
+!$acc loop independent private(leftst,rigtst,nflux)
       do i=is,ie+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
@@ -580,9 +593,10 @@
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
 
 !$acc kernels
-!$acc loop independent private(dsv,dsvp,dsvm)
+!$acc loop independent
       do k=ks,ke
       do i=is,ie
+!$acc loop independent private(dsv,dsvp,dsvm)
       do j=js-1,je+1
          dsvp(:) = (svc(:,i,j+1,k) -svc(:,i,j,k)                 )
          dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j-1,k))
@@ -666,8 +680,10 @@
 !$acc end kernels
 
 !$acc kernels
+!$acc loop independent
       do k=ks,ke
       do i=is,ie
+!$acc loop independent private(dsv,dsvp,dsvm)
       do j=js,je+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
@@ -705,9 +721,10 @@
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
 
 !$acc kernels
-!$acc loop independent private(dsv,dsvp,dsvm)
+!$acc loop independent
       do j=js,je
       do i=is,ie
+!$acc loop independent private(dsv,dsvp,dsvm)
       do k=ks-1,ke+1
          dsvp(:) = (svc(:,i,j,k+1) -svc(:,i,j,k)                 )
          dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j,k-1))
@@ -788,8 +805,10 @@
 !$acc end kernels
 
 !$acc kernels
+!$acc loop independent
       do j=js,je
       do i=is,ie
+!$acc loop independent private(dsv,dsvp,dsvm)
       do k=ks,ke+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
@@ -1110,12 +1129,16 @@
       character(40)::filename
       real(8),save::tout
       data tout / 0.0d0 / 
-      real(8),parameter:: dtout=1.0d-2
       integer::nout
       data nout / 1 /
-      integer,parameter::unitout=13
+      integer,parameter::unitout=17
       integer,parameter::unitbin=13
-      integer::gs=1
+      integer,parameter:: gs=1
+      integer,parameter:: nvar=5
+      real(8)::x1out(is-gs:ie+gs,2)
+      real(8)::x2out(js-gs:je+gs,2)
+      real(8)::x3out(js-gs:je+gs,2)
+      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,nvar)
 
       logical, save:: is_inited
       data is_inited /.false./
@@ -1128,6 +1151,22 @@
 
       if(time .lt. tout+dtout) return
 !$acc update host (d,v1,v2,v3,p)
+
+      x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
+      x1out(is-gs:ie+gs,2) = x1a(is-gs:ie+gs)
+
+      x2out(is-gs:ie+gs,1) = x2b(is-gs:ie+gs)
+      x2out(is-gs:ie+gs,2) = x2a(is-gs:ie+gs)
+
+      x3out(ks-gs:ke+gs,1) = x3b(ks-gs:ke+gs)
+      x3out(ks-gs:ke+gs,2) = x3a(ks-gs:ke+gs)
+
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,1) =  d(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+
 
       write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
       filename = trim(dirname)//filename
@@ -1142,16 +1181,12 @@
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
       filename = trim(dirname)//filename
       open(unitbin,file=filename,status='replace',form='binary') 
-      write(unitbin)x1b(is-gs:ie+gs),x1a(is-gs:ie+gs)
-      write(unitbin)x2b(js-gs:je+gs),x2a(is-gs:ie+gs)
-      write(unitbin)x3b(ks-gs:ke+gs),x3a(ks-gs:ke+gs)
-      write(unitbin)  d(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      write(unitbin) v1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      write(unitbin) v2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      write(unitbin) v3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      write(unitbin)  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      write(unitbin) x1out(:,:)
+      write(unitbin) x2out(:,:)
+      write(unitbin) x3out(:,:)
+      write(unitbin) hydout(:,:,:,:)
       close(unitbin)
-
+      
       write(6,*) "output:",nout,time
 
       nout=nout+1
