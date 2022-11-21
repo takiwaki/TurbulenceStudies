@@ -1,0 +1,12 @@
+
+*.x
+*.o
+*.mod
+
+control.dat
+
+/movies/
+/figures/
+/output/
+/bindata/
+
