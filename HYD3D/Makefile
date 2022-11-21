@@ -59,6 +59,8 @@ FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran
 ${vis}: Visualization.f90
 	${fc} ${fopt} ${FLAGHDF} $< -o ${vis}
 
+${VOR}: ${vis} ${BIN} ${countfile}
+	./${vis}
 
 #################
 # analysis
@@ -74,8 +76,6 @@ run-analysis: ${ana} ${count}
 ${countfile}: Init.sh
 	./Init.sh
 
-${VOR}: ${ana} ${BIN} ${countfile}
-	./${ana}
 
 #################
 # simulation
