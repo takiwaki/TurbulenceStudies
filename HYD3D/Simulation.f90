@@ -118,8 +118,9 @@
       real(8)::pi
 
       real(8)::Ahl,Bhl,Chl
-      real(8),parameter::k_ini=4.0d0
+      real(8),parameter::k_ini=2.0d0
       real(8),parameter::v0=6.0d0
+      real(8),parameter::eps=1.0d-1
 
       integer::seedsize
       integer,allocatable:: seed(:)
@@ -150,11 +151,11 @@
           p(i,j,k) = 2.5d0
 
          call random_number(x)
-         v1(i,j,k) = v1(i,j,k)*(1.0d0+1.0d-2*(x-0.5d0))
+         v1(i,j,k) = v1(i,j,k)*(1.0d0+eps*(x-0.5d0))
          call random_number(x)
-         v2(i,j,k) = v2(i,j,k)*(1.0d0+1.0d-2*(x-0.5d0))
+         v2(i,j,k) = v2(i,j,k)*(1.0d0+eps*(x-0.5d0))
          call random_number(x)
-         v3(i,j,k) = v3(i,j,k)*(1.0d0+1.0d-2*(x-0.5d0))
+         v3(i,j,k) = v3(i,j,k)*(1.0d0+eps*(x-0.5d0))
       enddo
       enddo
       enddo
