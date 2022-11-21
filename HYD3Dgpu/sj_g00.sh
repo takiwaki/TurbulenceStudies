@@ -1,5 +1,5 @@
 #! /bin/bash
-#SBATCH --partition=ga40-1gpu
+#SBATCH --partition=ga80-1gpu
 #SBATCH --gres=gpu:1
 
 # usage sbatch sj_g00.sh

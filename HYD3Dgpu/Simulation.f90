@@ -3,7 +3,7 @@
       integer::nhy
       real(8)::time,dt
       data time / 0.0d0 /
-      integer,parameter::ngrid=256
+      integer,parameter::ngrid=128
       integer,parameter::mgn=2
       integer,parameter::in=ngrid+2*mgn+1 &
      &                  ,jn=ngrid+2*mgn+1 &
@@ -133,7 +133,7 @@
       real(8)::pi
 
       real(8)::Ahl,Bhl,Chl
-      real(8),parameter::k_ini=10.0d0
+      real(8),parameter::k_ini=4.0d0
 
       integer::seedsize
       integer,allocatable:: seed(:)

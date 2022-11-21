@@ -12,7 +12,7 @@ all: ${exe}
 #################
 
 fc= nvfortran
-foptopenacc = -Minfo=accel -acc
+foptopenacc = -Minfo=accel -acc -mcmodel=medium
 fopt = -g -traceback -O2
 #fopt = -g -traceback -check all -fpe0
 
