@@ -1,5 +1,5 @@
 # TurbulenceStudies
-This page summarize my study on turbulence.
+This page summarizes my study on turbulence.
 You can perform 4 kinds of simulations.
 
 - [2D hydrodynamic simulation](./HYD2D/)
