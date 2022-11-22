@@ -133,11 +133,14 @@
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8):: v0 = 1.0d0
-      real(8):: b0 = 1.0d0
-      real(8):: p0 = 2.5d0
+      real(8),parameter:: ekin = 1.5d0
+      real(8),parameter:: emag = 1.5d0
+      real(8),parameter:: eint = 1.0d0
+      real(8),parameter:: v0 = sqrt(ekin*2.0)
+      real(8),parameter:: b0 = sqrt(emag*2.0)
+      real(8),parameter:: p0 = eint/(gam-1.0d0)
+      real(8),parameter:: eps = 1.0d-1
       real(8),parameter:: deltax = 0.1d0,deltay = 0.2 ! randam phase
-      real(8),parameter:: eps=1.0d-1
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
