@@ -1,6 +1,7 @@
       module commons
       implicit none
       integer::nhy
+      integer,parameter::nhymax=80000 
       real(8)::time,dt
       data time / 0.0d0 /
       real(8),parameter:: timemax=5.0d0
@@ -59,7 +60,7 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-      mloop: do nhy=1,80000
+      mloop: do nhy=1,nhymax
          if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call TimestepControl
          call BoundaryCondition

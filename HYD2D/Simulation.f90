@@ -114,7 +114,8 @@
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8):: v0 = 6.0d0
+      real(8):: v0 = 1.0d0
+      real(8):: b0 = 0.0d0
       real(8):: p0 = 2.5d0
       real(8):: eps = 1.0d-1
 

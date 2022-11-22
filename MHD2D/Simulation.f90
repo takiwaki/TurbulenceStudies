@@ -133,8 +133,11 @@
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8):: v0 = 6.0d0
-      real(8):: b0 = 6.0d0
+      real(8):: v0 = 1.0d0
+      real(8):: b0 = 1.0d0
+      real(8):: p0 = 2.5d0
+      real(8),parameter:: deltax = 0.1d0,deltay = 0.2 ! randam phase
+      real(8),parameter:: eps=1.0d-1
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -149,10 +152,10 @@
       do k=ks,ke
       do j=js,je+1
       do i=is,ie+1
-         vpsi1b(i,j,k) = psinorm * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                           * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         vpsi2b(i,j,k) = psinorm * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                           * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
+         vpsi1b(i,j,k) = psinorm * sin(2.0d0*pi*(k_ini*x1b(i)/(x1max-x1min)+deltax)) &
+     &                           * sin(2.0d0*pi*(k_ini*x2a(j)/(x2max-x2min)+deltay))
+         vpsi2b(i,j,k) = psinorm * sin(2.0d0*pi*(k_ini*x1a(i)/(x1max-x1min)+deltax)) &
+     &                           * sin(2.0d0*pi*(k_ini*x2b(j)/(x2max-x2min)+deltay))
          mpsi1b(i,j,k) = psinorm * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
      &                           * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
          mpsi2b(i,j,k) = psinorm * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
@@ -161,27 +164,22 @@
       enddo
       enddo
 
-
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         v1(i,j,k) =  v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         v2(i,j,k) = -v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
          b1(i,j,k) =  b0*(mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
          b2(i,j,k) = -b0*(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-          p(i,j,k) = 2.5d0
+          p(i,j,k) = p0
          v3(i,j,k) = 0.0d0
          b3(i,j,k) = 0.0d0
          bp(i,j,k) = 0.0d0
 
          call random_number(x)
-         v1(i,j,k) = v1(i,j,k) * (1.0d0+1.0d-2*(x-0.5d0))
+         v1(i,j,k) = v1(i,j,k) * (1.0d0+eps*(x-0.5d0))
          call random_number(x)
-         v2(i,j,k) = v2(i,j,k) * (1.0d0+1.0d-2*(x-0.5d0))
-         call random_number(x)
-         b1(i,j,k) = b1(i,j,k) * (1.0d0+1.0d-2*(x-0.5d0))
-         call random_number(x)
-         b2(i,j,k) = b2(i,j,k) * (1.0d0+1.0d-2*(x-0.5d0))
+         v2(i,j,k) = v2(i,j,k) * (1.0d0+eps*(x-0.5d0))
 
       enddo
       enddo
