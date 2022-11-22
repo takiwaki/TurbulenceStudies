@@ -389,8 +389,8 @@
      &                           )/d(i,j,k))
          dtl1 =(x1a(i+1)-x1a(i))/(abs(v1(i,j,k)) + ctot)
          dtl2 =(x2a(j+1)-x2a(j))/(abs(v2(i,j,k)) + ctot)
-!         dtl3 =(x3a(k+1)-x3a(k))/(abs(v3(i,j,k)) + ctot)
-         dtlocal = min (dtl1,dtl2)
+         dtl3 =(x3a(k+1)-x3a(k))/(abs(v3(i,j,k)) + ctot)
+         dtlocal = min (dtl1,dtl2,dtl3)
          if(dtlocal .lt. dtmin) dtmin = dtlocal
       enddo
       enddo
@@ -541,12 +541,12 @@
 
          leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve1,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve1,i,j,k) &
-     &                     +ptl-leftpr(nbm1,i,j,k)**2
+     &                     +ptl               -leftpr(nbm1,i,j,k)*leftpr(nbm1,i,j,k)
          leftco(mfvv,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve1,i,j,k) &
      &                                        -leftpr(nbm2,i,j,k)*leftpr(nbm1,i,j,k)
          leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve1,i,j,k) &
      &                                        -leftpr(nbm3,i,j,k)*leftpr(nbm1,i,j,k)
-         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl)*leftpr(nve1,i,j,k) &
+         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl                )*leftpr(nve1,i,j,k) &
      &                     -( leftpr(nbm1,i,j,k)*leftpr(nve1,i,j,k)     &
      &                       +leftpr(nbm2,i,j,k)*leftpr(nve2,i,j,k)     &
      &                       +leftpr(nbm3,i,j,k)*leftpr(nve3,i,j,k))*leftpr(nbm1,i,j,k)
@@ -600,12 +600,12 @@
 
          rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve1,i,j,k)
          rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve1,i,j,k) &
-     &                     +ptl-rigtpr(nbm1,i,j,k)**2
+     &                     +ptl               -rigtpr(nbm1,i,j,k)*rigtpr(nbm1,i,j,k)
          rigtco(mfvv,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve1,i,j,k) &
      &                                        -rigtpr(nbm2,i,j,k)*rigtpr(nbm1,i,j,k)
          rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve1,i,j,k) &
      &                                        -rigtpr(nbm3,i,j,k)*rigtpr(nbm1,i,j,k)
-         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl)*rigtpr(nve1,i,j,k) &
+         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl                )*rigtpr(nve1,i,j,k) &
      &                     -( rigtpr(nbm1,i,j,k)*rigtpr(nve1,i,j,k)     &
      &                       +rigtpr(nbm2,i,j,k)*rigtpr(nve2,i,j,k)     &
      &                       +rigtpr(nbm3,i,j,k)*rigtpr(nve3,i,j,k))*rigtpr(nbm1,i,j,k)
@@ -725,10 +725,10 @@
          leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve2,i,j,k) &
      &                                        -leftpr(nbm1,i,j,k)*leftpr(nbm2,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve2,i,j,k) &
-     &                     +ptl-leftpr(nbm2,i,j,k)**2
+     &                     +ptl               -leftpr(nbm2,i,j,k)*leftpr(nbm2,i,j,k)
          leftco(mfvv,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve2,i,j,k) &
      &                                        -leftpr(nbm3,i,j,k)*leftpr(nbm2,i,j,k)
-         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl)*leftpr(nve2,i,j,k) &
+         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl                )*leftpr(nve2,i,j,k) &
      &                     -( leftpr(nbm1,i,j,k)*leftpr(nve1,i,j,k)     &
      &                       +leftpr(nbm2,i,j,k)*leftpr(nve2,i,j,k)     &
      &                       +leftpr(nbm3,i,j,k)*leftpr(nve3,i,j,k))*leftpr(nbm2,i,j,k)
@@ -779,12 +779,12 @@
 
          rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve2,i,j,k) ! rho v
          rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve2,i,j,k) &
-     &                     -rigtpr(nbm1,i,j,k)*rigtpr(nbm2,i,j,k)
+     &                                        -rigtpr(nbm1,i,j,k)*rigtpr(nbm2,i,j,k)
          rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve2,i,j,k) &
-     &                     +ptl-rigtpr(nbm2,i,j,k)**2
+     &                     +ptl               -rigtpr(nbm2,i,j,k)*rigtpr(nbm2,i,j,k)
          rigtco(mfvv,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve2,i,j,k) &
-     &                     -rigtpr(nbm3,i,j,k)*rigtpr(nbm2,i,j,k)
-         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl)*rigtpr(nve2,i,j,k) &
+     &                                        -rigtpr(nbm3,i,j,k)*rigtpr(nbm2,i,j,k)
+         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl                )*rigtpr(nve2,i,j,k) &
      &                     -( rigtpr(nbm1,i,j,k)*rigtpr(nve1,i,j,k)     &
      &                       +rigtpr(nbm2,i,j,k)*rigtpr(nve2,i,j,k)     &
      &                       +rigtpr(nbm3,i,j,k)*rigtpr(nve3,i,j,k))*rigtpr(nbm2,i,j,k)
@@ -905,8 +905,8 @@
          leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve3,i,j,k) &
      &                                        -leftpr(nbm2,i,j,k)*leftpr(nbm3,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve3,i,j,k) &
-     &                     +leftpr(npre,i,j,k)-leftpr(nbm3,i,j,k)**2
-         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl)*leftpr(nve3,i,j,k) &
+     &                     +ptl               -leftpr(nbm3,i,j,k)*leftpr(nbm3,i,j,k)
+         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl                )*leftpr(nve3,i,j,k) &
      &                     -( leftpr(nbm1,i,j,k)*leftpr(nve1,i,j,k)     &
      &                       +leftpr(nbm2,i,j,k)*leftpr(nve2,i,j,k)     &
      &                       +leftpr(nbm3,i,j,k)*leftpr(nve3,i,j,k))*leftpr(nbm3,i,j,k)
@@ -948,9 +948,9 @@
      &                     +rigtpr(nbm2,i,j,k)**2                 &
      &                     +rigtpr(nbm3,i,j,k)**2)
 
-         rigtco(mubw,i,j,k)=rigtpr(nbm1,i,j,k)  ! b_x
-         rigtco(mubu,i,j,k)=rigtpr(nbm2,i,j,k)  ! b_y
-         rigtco(mubv,i,j,k)=rigtpr(nbm3,i,j,k)  ! b_z
+         rigtco(mubv,i,j,k)=rigtpr(nbm1,i,j,k)  ! b_x
+         rigtco(mubw,i,j,k)=rigtpr(nbm2,i,j,k)  ! b_y
+         rigtco(mubu,i,j,k)=rigtpr(nbm3,i,j,k)  ! b_z
          rigtco(mubp,i,j,k)=rigtpr(nbps,i,j,k)  ! psi
 
          ptl = rigtpr(npre,i,j,k) + ( rigtpr(nbm1,i,j,k)**2 &
@@ -963,8 +963,8 @@
          rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve3,i,j,k) &
      &                                        -rigtpr(nbm2,i,j,k)*rigtpr(nbm3,i,j,k)
          rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve3,i,j,k) &
-     &                     +ptl-rigtpr(nbm3,i,j,k)**2
-         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl)*rigtpr(nve3,i,j,k) &
+     &                     +ptl               -rigtpr(nbm3,i,j,k)*rigtpr(nbm3,i,j,k)
+         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl                )*rigtpr(nve3,i,j,k) &
      &                     -( rigtpr(nbm1,i,j,k)*rigtpr(nve1,i,j,k)      &
      &                       +rigtpr(nbm2,i,j,k)*rigtpr(nve2,i,j,k)      &
      &                       +rigtpr(nbm3,i,j,k)*rigtpr(nve3,i,j,k))*rigtpr(nbm3,i,j,k)
@@ -985,7 +985,7 @@
      &                             -4.0d0*css*rigtpr(nbm3,i,j,k)**2  &
      &                                          /rigtpr(nden,i,j,k)) &
      &                            )/2.0d0)
-         rigtco(mvel,i,j,k)= rigtpr(nve2,i,j,k)
+         rigtco(mvel,i,j,k)= rigtpr(nve3,i,j,k)
          rigtco(mpre,i,j,k)= ptl
 
       enddo
@@ -998,7 +998,9 @@
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
 !         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
+!         call HLLC(leftst,rigtst,nflux)
+         call HLLD(leftst,rigtst,nflux)
+
          nflux3(mden,i,j,k)=nflux(mden)
          nflux3(mrv1,i,j,k)=nflux(mrvv)
          nflux3(mrv2,i,j,k)=nflux(mrvw)
@@ -1811,6 +1813,7 @@
       write(unitout,*) "# ",time,dt
       write(unitout,*) "# ",ngrid,gs
       write(unitout,*) "# ",ngrid,gs
+      write(unitout,*) "# ",ngrid,gs
       close(unitout)
 
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
@@ -1827,10 +1830,10 @@
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = bp(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,6) = b2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,7) = b3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,8) = bp(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,9) =  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
       filename = trim(dirname)//filename
