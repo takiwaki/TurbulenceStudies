@@ -52,12 +52,7 @@ ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 # analysis
 #################
 
-analysis-code: ${ana} 
-
 count-number: ${countfile}
-
-run-analysis: ${ana} ${count}
-	./${ana}
 
 ${countfile}: Init.sh
 	./Init.sh
@@ -69,14 +64,8 @@ ${VOR}: ${ana} ${BIN} ${countfile}
 # simulation
 #################
 
-run: ${BIN}
-	./${exe}
-
 ${BIN}: ${exe}
 	./${exe}
-
-
-simulation-code: ${exe} 
 
 ${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}

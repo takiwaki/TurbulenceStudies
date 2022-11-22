@@ -7,21 +7,21 @@
 ### compile 
 To run the code, you need to compile 'Simulation.f90'.
     
-    make simulation-code
+    make Simulation.x
     
 Then `Simulation.x`is made in this directory.
 
 ### run
 Let's run the code.
     
-    make run
+    ./Simulation.x
     
 The simulation data is saved in `bindata/`.
 
 ### analysis
 To analyze the data, let us make `Analysis.x`.
     
-    make analysis-code
+    make Analysis.x
     
 Now you have many time-snapshots of data. To count it, use a script.
     
@@ -30,7 +30,7 @@ Now you have many time-snapshots of data. To count it, use a script.
 See the file, `cat control.dat`. You can know the number of files.
 Then preparation is done. Run the analyis.
     
-    make run-analysis
+    ./Analyis.x
     
 The output is saved in `output/`.
 ### 2D plots and animation.
@@ -55,27 +55,5 @@ To do all in one command, you just type `make` or `make all`.
    
       make all
       
-## Initial condition
-stream function is given.
-
-$$ \psi \propto \sin(2\pi k x)\sin(2\pi k y).$$
-
-Initial velocity is set from $\psi$.
-
-$$ v_x = \partial_y \psi, v_y = -\partial_x \psi, $$
-
-## Analysis
-
-Animation of vorticity will be made.
-
-$$ \omega =  \partial_x v_y - \partial_y v_x $$
-
-The spectrum of variable, $X$ ,is calculated as follows. First 2D Fourier transformation is given.
-
-$$\hat{X}_{\rm 2D,c}(k_x,k_y) = \iint dx dy X \cos(2\pi (k_x x+k_y y))$$
-
-$$\hat{X}_{\rm 2D,s}(k_x,k_y) = \iint dx dy X\sin(2\pi (k_x x+k_y y))$$
-
-Then 1D Fourier transformation is given.
-
-$$\hat{X}_{\rm 1D} dk = \sqrt{ \hat{X}_{\rm 2D,c}^2+\hat{X}_{\rm 2D,s}^2} dk_x dk_y $$
+## Setups and Results
+[Go to Notion page.](https://www.notion.so/Turbulence-Studies-e4836ad642684f8f992d54a1f7e22635#97db0fffb85541a891157c14669bd36e)
