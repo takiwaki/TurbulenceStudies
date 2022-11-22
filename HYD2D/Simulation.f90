@@ -115,7 +115,8 @@
       real(8)::x
 
       real(8):: v0 = 6.0d0
-
+      real(8):: p0 = 2.5d0
+      real(8):: eps = 1.0d-1
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -144,12 +145,12 @@
       do i=is,ie
          v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
          v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-          p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
+          p(i,j,k) =  p0
          v3(i,j,k) = 0.0d0
          call random_number(x)
-         v1(i,j,k) = v1(i,j,k) *(1.0d0+1.0d-2*(x-0.5d0))
+         v1(i,j,k) = v1(i,j,k) *(1.0d0+eps*(x-0.5d0))
          call random_number(x)
-         v2(i,j,k) = v2(i,j,k) *(1.0d0+1.0d-2*(x-0.5d0))
+         v2(i,j,k) = v2(i,j,k) *(1.0d0+eps*(x-0.5d0))
       enddo
       enddo
       enddo
