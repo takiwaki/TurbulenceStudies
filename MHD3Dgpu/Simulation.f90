@@ -7,7 +7,7 @@
       real(8),parameter:: timemax=5.0d0
       real(8),parameter:: dtout=5.0d0/600
 
-      integer,parameter::ngrid=32
+      integer,parameter::ngrid=128
       integer,parameter::mgn=2
       integer,parameter::in=ngrid+2*mgn+1 &
      &                  ,jn=ngrid+2*mgn+1 &
@@ -73,7 +73,6 @@
 
 !$acc declare create(chg)
 !$acc declare create(svc,nflux1,nflux2,nflux3)
-      end module fluxmod
       end module fluxmod
 
       program main
