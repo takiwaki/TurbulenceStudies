@@ -1,9 +1,10 @@
 
-*~
-
 *.x
 *.o
 *.mod
+
+*.dat
+*.log
 
 control.dat
 

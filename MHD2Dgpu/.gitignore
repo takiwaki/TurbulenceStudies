@@ -3,6 +3,9 @@
 *.o
 *.mod
 
+*.dat
+*.log
+
 control.dat
 
 /movies/
