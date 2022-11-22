@@ -21,7 +21,7 @@ fc=ifort -extend-source
 fopt=-g -traceback -O2
 #fopt=-g -traceback -check all -fpe0
 
-all: ${exe} ${moviefile}
+all: ${exe} ${moviefile} ${specfile}
 
 .PHONY: all clean allclean
 
@@ -52,15 +52,10 @@ ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 # analysis
 #################
 
-analysis-code: ${ana} 
-
 count-number: ${countfile}
 
-run-analysis: ${ana} ${count}
-	./${ana}
-
-${countfile}: Init.sh
-	./Init.sh
+${countfile}: CountBindata.sh
+	./CountBindata.sh
 
 ${VOR}: ${ana} ${BIN} ${countfile}
 	./${ana}
@@ -69,14 +64,8 @@ ${VOR}: ${ana} ${BIN} ${countfile}
 # simulation
 #################
 
-run: ${BIN}
-	./${exe}
-
 ${BIN}: ${exe}
 	./${exe}
-
-
-simulation-code: ${exe} 
 
 ${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
