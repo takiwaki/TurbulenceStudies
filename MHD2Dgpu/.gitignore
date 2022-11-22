@@ -5,6 +5,7 @@
 
 *.dat
 *.log
+*.out
 
 control.dat
 
