@@ -1,26 +1,27 @@
       module commons
       implicit none
       integer::nhy
-      integer,parameter:: nhymax =600000
+      integer,parameter::nhymax=80000 
       real(8)::time,dt
       data time / 0.0d0 /
       real(8),parameter:: timemax=5.0d0
       real(8),parameter:: dtout=5.0d0/600
-      
-      integer,parameter::ngrid=512
+
+      integer,parameter::ngrid=32
       integer,parameter::mgn=2
       integer,parameter::in=ngrid+2*mgn+1 &
      &                  ,jn=ngrid+2*mgn+1 &
-     &                  ,kn=1
+     &                  ,kn=ngrid+2*mgn+1
       integer,parameter::is=mgn+1 &
      &                  ,js=mgn+1 &
-     &                  ,ks=1 
+     &                  ,ks=mgn+1
       integer,parameter::ie=ngrid+mgn &
      &                  ,je=ngrid+mgn &
-     &                  ,ke=1
+     &                  ,ke=ngrid+mgn
 
       real(8),parameter:: x1min=-0.5d0,x1max=0.5d0
       real(8),parameter:: x2min=-0.5d0,x2max=0.5d0
+      real(8),parameter:: x3min=-0.5d0,x3max=0.5d0
       real(8),dimension(in)::x1a,x1b
       real(8),dimension(jn)::x2a,x2b
       real(8),dimension(kn)::x3a,x3b
@@ -30,7 +31,6 @@
       real(8),dimension(in,jn,kn)::b1,b2,b3,bp
 
       real(8),parameter::gam=5.0d0/3.0d0
-
 !$acc declare create(ngrid,mgn)
 !$acc declare create(in,jn,kn)
 !$acc declare create(is,js,ks)
@@ -44,8 +44,9 @@
 !$acc declare create(d,et,mv1,mv2,mv3)
 !$acc declare create(p,ei,v1,v2,v3,cs)
 !$acc declare create(b1,b2,b3,bp)
-      
+
 !$acc declare create(gam)
+
       end module commons
       
       module fluxmod
@@ -72,7 +73,7 @@
 
 !$acc declare create(chg)
 !$acc declare create(svc,nflux1,nflux2,nflux3)
-      
+      end module fluxmod
       end module fluxmod
 
       program main
@@ -87,21 +88,24 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
+                                  write(6,*)"step","time","dt"
       mloop: do nhy=1,nhymax
-         if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
+         if(mod(nhy,100) .eq. 0 ) write(6,*)nhy,time,dt
          call TimestepControl
          call BoundaryCondition
          call StateVevtor
          call EvaulateCh
          call NumericalFlux1
          call NumericalFlux2
+         call NumericalFlux3
          call UpdateConsv
          call DampPsi
          call PrimVariable
          time=time+dt
          call Output(is_final)
-         if(time > timemax) exit mloop         
+         if(time > timemax) exit mloop
       enddo mloop
+
       is_final = .true.
       call Output(is_final)
 
@@ -111,7 +115,7 @@
       subroutine GenerateGrid
       use commons
       implicit none
-      real(8)::dx,dy
+      real(8)::dx,dy,dz
       integer::i,j,k
 ! x coordinates
       dx=(x1max-x1min)/dble(ngrid)
@@ -132,9 +136,17 @@
          x2b(j) = 0.5d0*(x2a(j+1)+x2a(j))
       enddo
 
+      dz=(x3max-x3min)/ngrid
+      do k=1,kn
+         x3a(k) = dz*(k-(mgn+1))+x3min
+      enddo
+      do k=1,kn-1
+         x3b(k) = 0.5d0*(x3a(k+1)+x3a(k))
+      enddo
+
 !$acc update device (x1a,x1b)
 !$acc update device (x2a,x2b)
-      
+!$acc update device (x3a,x3b)
       return
       end subroutine GenerateGrid
 
@@ -142,18 +154,18 @@
       use commons
       implicit none
       integer::i,j,k
-      real(8)::pi
-      real(8),parameter::k_ini=10.0d0
 
-      real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
-      real(8),dimension(in,jn,kn)::mpsi1b,mpsi2b
+      real(8)::pi
+
+      real(8)::Ahl,Bhl,Chl
+      real(8),parameter::k_ini=2.0d0
+      real(8),parameter::v0=6.0d0
+      real(8),parameter::b0=6.0d0
+      real(8),parameter::eps=1.0d-1
 
       integer::seedsize
       integer,allocatable:: seed(:)
       real(8)::x
-
-      real(8)::ampv = 1.0d-1
-      real(8)::ampb = 0.0d0
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -162,19 +174,37 @@
 
       pi=acos(-1.0d0)
 
+      Ahl = 1.0d0
+      Bhl = 1.0d0
+      Chl = 1.0d0
+
       d(:,:,:) = 1.0d0
 
       do k=ks,ke
-      do j=js,je+1
-      do i=is,ie+1
-         vpsi1b(i,j,k) = ampv * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         vpsi2b(i,j,k) = ampv * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
-         mpsi1b(i,j,k) = ampb * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         mpsi2b(i,j,k) = ampb * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
+      do j=js,je
+      do i=is,ie
+         v1(i,j,k) = v0*(  Ahl*sin(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)) &
+   &                     + Chl*cos(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)))
+         v2(i,j,k) = v0*(  Bhl*sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
+   &                     + Ahl*cos(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)))
+         v3(i,j,k) = v0*(  Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
+   &                     + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)))
+
+          p(i,j,k) = 2.5d0
+
+         b1(i,j,k) = b0*(  Ahl*sin(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)) &
+   &                     + Chl*cos(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)))
+         b2(i,j,k) = b0*(  Bhl*sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
+   &                     + Ahl*cos(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)))
+         b3(i,j,k) = b0*(  Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
+   &                     + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)))
+
+         call random_number(x)
+         v1(i,j,k) = v1(i,j,k)*(1.0d0+eps*(x-0.5d0))
+         call random_number(x)
+         v2(i,j,k) = v2(i,j,k)*(1.0d0+eps*(x-0.5d0))
+         call random_number(x)
+         v3(i,j,k) = v3(i,j,k)*(1.0d0+eps*(x-0.5d0))
       enddo
       enddo
       enddo
@@ -184,30 +214,14 @@
       do j=js,je
       do i=is,ie
          call random_number(x)
-         v1(i,j,k) =  (vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b1(i,j,k) =  (mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b2(i,j,k) = -(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-          p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
-         v3(i,j,k) = 0.0d0
-         b3(i,j,k) = 0.0d0
-         bp(i,j,k) = 0.0d0
-      enddo
-      enddo
-      enddo
-
-      do k=ks,ke
-      do j=js,je
-      do i=is,ie
           ei(i,j,k) = p(i,j,k)/(gam-1.0d0)
           cs(i,j,k) = sqrt(gam*p(i,j,k)/d(i,j,k))
       enddo
       enddo
       enddo
       
-
+      write(6,*)"initial profile is set"
       call BoundaryCondition
-
 
 !$acc update device (d,v1,v2,v3)
 !$acc update device (p,ei,cs)
@@ -220,9 +234,9 @@
       use commons
       implicit none
       integer::i,j,k
-      
-!$acc kernels      
-      k=ks
+
+!$acc kernels
+      do k=1,kn-1
       do j=1,jn-1
       do i=1,mgn
            d(i,j,k) =  d(ie-mgn+i,j,k)
@@ -236,8 +250,9 @@
           bp(i,j,k) = bp(ie-mgn+i,j,k)
       enddo
       enddo
+      enddo
 
-      k=ks
+      do k=1,kn-1
       do j=1,jn-1
       do i=1,mgn
            d(ie+i,j,k) =  d(is+i-1,j,k)
@@ -251,8 +266,9 @@
           bp(ie+i,j,k) = bp(is+i-1,j,k)
       enddo
       enddo
+      enddo
 
-      k=ks
+      do k=1,kn-1
       do i=1,in-1
       do j=1,mgn
            d(i,j,k) =  d(i,je-mgn+j,k)
@@ -266,8 +282,9 @@
           bp(i,j,k) = bp(i,je-mgn+j,k)
       enddo
       enddo
+      enddo
 
-      k=ks
+      do k=1,kn-1
       do i=1,in-1
       do j=1,mgn
            d(i,je+j,k) =  d(i,js+j-1,k)
@@ -281,6 +298,39 @@
           bp(i,je+j,k) = bp(i,js+j-1,k)
       enddo
       enddo
+      enddo
+
+      do j=1,jn-1
+      do i=1,in-1
+      do k=1,mgn
+           d(i,j,k) =  d(i,j,ke-mgn+k)
+          ei(i,j,k) = ei(i,j,ke-mgn+k)
+          v1(i,j,k) = v1(i,j,ke-mgn+k)
+          v2(i,j,k) = v2(i,j,ke-mgn+k)
+          v3(i,j,k) = v3(i,j,ke-mgn+k)
+          b1(i,j,k) = b1(i,j,ke-mgn+k)
+          b2(i,j,k) = b2(i,j,ke-mgn+k)
+          b3(i,j,k) = b3(i,j,ke-mgn+k)
+          bp(i,j,k) = bp(i,j,ke-mgn+k)
+      enddo
+      enddo
+      enddo
+
+      do j=1,jn-1
+      do i=1,in-1
+      do k=1,mgn
+           d(i,j,ke+k) =  d(i,j,ks+k-1)
+          ei(i,j,ke+k) = ei(i,j,ks+k-1)
+          v1(i,j,ke+k) = v1(i,j,ks+k-1)
+          v2(i,j,ke+k) = v2(i,j,ks+k-1)
+          v3(i,j,ke+k) = v3(i,j,ks+k-1)
+          b1(i,j,ke+k) = b1(i,j,ks+k-1)
+          b2(i,j,ke+k) = b2(i,j,ks+k-1)
+          b3(i,j,ke+k) = b3(i,j,ks+k-1)
+          bp(i,j,ke+k) = bp(i,j,ks+k-1)
+      enddo
+      enddo
+      enddo
 !$acc end kernels
 
       return
@@ -290,7 +340,7 @@
       use commons
       implicit none
       integer::i,j,k
-
+      
 !$acc kernels      
 !$acc loop independent 
       do k=ks,ke
@@ -312,6 +362,7 @@
       enddo
       enddo
 !$acc end kernels
+      
       return
       end subroutine Consvvariable
 
@@ -344,6 +395,7 @@
       enddo
       enddo
 !$acc end kernels
+
       return
       end subroutine PrimVariable
 
@@ -380,6 +432,7 @@
       dt = 0.05d0 * dtmin
 !$acc end kernels
 !$acc update host (dt)
+
       return
       end subroutine TimestepControl
 
@@ -389,9 +442,9 @@
       implicit none
       integer::i,j,k
 
-      k=ks
 !$acc kernels
 !$acc loop independent
+      do k=1,kn-1
       do j=1,jn-1
       do i=1,in-1
          svc(nden,i,j,k) =  d(i,j,k)
@@ -407,8 +460,9 @@
          p(i,j,k) =  ei(i,j,k)*(gam-1.0d0) ! for output boundary 
       enddo
       enddo
+      enddo
 !$acc end kernels
-      
+
       return
       end subroutine StateVevtor
 
@@ -449,6 +503,8 @@
       return
       end subroutine vanLeer
 
+
+
       subroutine MClimiter(a,b,c,d)
 !$acc routine seq
       use fluxmod, only : nhyd
@@ -477,11 +533,12 @@
       real(8),dimension(2*mflx+madd):: leftst,rigtst
       real(8),dimension(mflx):: nflux
       real(8):: ptl,css,cts 
+
 !$acc declare create(leftco,rigtco)
 !$acc declare create(leftpr,rigtpr)
 
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
-
+      
 !$acc kernels      
 !$acc loop independent
       do k=ks,ke
@@ -639,8 +696,8 @@
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
 !         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
-!         call HLLD(leftst,rigtst,nflux)
+!         call HLLC(leftst,rigtst,nflux)
+         call HLLD(leftst,rigtst,nflux)
          nflux1(mden,i,j,k)=nflux(mden)
          nflux1(mrv1,i,j,k)=nflux(mrvu)
          nflux1(mrv2,i,j,k)=nflux(mrvv)
@@ -662,7 +719,7 @@
       enddo
 !$acc end kernels
 !$acc end data
-      
+
       return
       end subroutine Numericalflux1
 
@@ -700,7 +757,7 @@
 !         rigtpr(:,i,j,k) = svc(:,i,j  ,k)
 
        enddo
-       enddo
+       enddo  
        enddo
 !$acc end kernels
 
@@ -833,8 +890,8 @@
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
 !         call HLLE(leftst,rigtst,nflux)
-         call HLLC(leftst,rigtst,nflux)
-!         call HLLD(leftst,rigtst,nflux)
+!         call HLLC(leftst,rigtst,nflux)
+         call HLLD(leftst,rigtst,nflux)
 
          nflux2(mden,i,j,k)=nflux(mden)
          nflux2(mrv1,i,j,k)=nflux(mrvw)
@@ -859,6 +916,200 @@
       
       return
       end subroutine Numericalflux2
+
+      subroutine NumericalFlux3
+      use commons, only: is,ie,in,js,je,jn,ks,ke,kn,gam
+      use fluxmod
+      implicit none
+      integer::i,j,k
+      real(8),dimension(nhyd):: dsvp,dsvm,dsvc,dsv
+      real(8),dimension(nhyd,in,jn,kn):: leftpr,rigtpr
+      real(8),dimension(2*mflx+madd,in,jn,kn):: leftco,rigtco
+      real(8),dimension(2*mflx+madd):: leftst,rigtst
+      real(8),dimension(mflx):: nflux
+      real(8):: ptl,css,cts 
+
+!$acc declare create(leftco,rigtco)
+!$acc declare create(leftpr,rigtpr)
+
+!$acc data present(leftco,rigtco,leftpr,rigtpr)
+
+!$acc kernels
+!$acc loop independent
+      do j=js,je
+      do i=is,ie
+!$acc loop independent private(dsv,dsvp,dsvm)
+      do k=ks-1,ke+1
+         dsvp(:) = (svc(:,i,j,k+1) -svc(:,i,j,k)                 )
+         dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j,k-1))
+
+         call vanLeer(dsvp,dsvm,dsv)
+!         call minmod(dsvp,dsvm,dsv)
+         leftpr(:,i,j,k+1) = svc(:,i,j,k) + 0.5d0*dsv(:)
+         rigtpr(:,i,j,k  ) = svc(:,i,j,k) - 0.5d0*dsv(:)
+
+       enddo
+       enddo
+       enddo
+!$acc end kernels
+
+!$acc kernels
+!$acc loop independent
+      do j=js,je
+      do i=is,ie
+      do k=ks,ke+1
+!==============================
+! Left
+!==============================
+         leftco(mudn,i,j,k)=leftpr(nden,i,j,k)
+         leftco(muvv,i,j,k)=leftpr(nve1,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muvw,i,j,k)=leftpr(nve2,i,j,k)*leftpr(nden,i,j,k) ! rho v
+         leftco(muvu,i,j,k)=leftpr(nve3,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muet,i,j,k)=leftpr(nene,i,j,k)*leftpr(nden,i,j,k) & ! thermal
+     &               +0.5d0*leftpr(nden,i,j,k)*(                  & ! kinetic
+     &                     +leftpr(nve1,i,j,k)**2                 &
+     &                     +leftpr(nve2,i,j,k)**2                 &
+     &                     +leftpr(nve3,i,j,k)**2)                &
+     &               +0.5d0*                    (                 & ! magnetic 
+     &                     +leftpr(nbm1,i,j,k)**2                 &
+     &                     +leftpr(nbm2,i,j,k)**2                 &
+     &                     +leftpr(nbm3,i,j,k)**2)                 
+
+         leftco(mubv,i,j,k)=leftpr(nbm1,i,j,k)  ! b_x
+         leftco(mubw,i,j,k)=leftpr(nbm2,i,j,k)  ! b_y
+         leftco(mubu,i,j,k)=leftpr(nbm3,i,j,k)  ! b_z
+         leftco(mubp,i,j,k)=leftpr(nbps,i,j,k)  ! psi
+
+         ptl = leftpr(npre,i,j,k) + ( leftpr(nbm1,i,j,k)**2        &
+     &                               +leftpr(nbm2,i,j,k)**2        &
+     &                               +leftpr(nbm3,i,j,k)**2)/2.0d0 
+
+         leftco(mfdn,i,j,k)=leftpr(nden,i,j,k)                   *leftpr(nve3,i,j,k) ! rho v
+         leftco(mfvv,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve1,i,j,k)*leftpr(nve3,i,j,k) &
+     &                                        -leftpr(nbm1,i,j,k)*leftpr(nbm3,i,j,k)
+         leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve3,i,j,k) &
+     &                                        -leftpr(nbm2,i,j,k)*leftpr(nbm3,i,j,k)
+         leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve3,i,j,k) &
+     &                     +leftpr(npre,i,j,k)-leftpr(nbm3,i,j,k)**2
+         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl)*leftpr(nve3,i,j,k) &
+     &                     -( leftpr(nbm1,i,j,k)*leftpr(nve1,i,j,k)     &
+     &                       +leftpr(nbm2,i,j,k)*leftpr(nve2,i,j,k)     &
+     &                       +leftpr(nbm3,i,j,k)*leftpr(nve3,i,j,k))*leftpr(nbm3,i,j,k)
+
+         leftco(mfbv,i,j,k) =  leftpr(nbm1,i,j,k)*leftpr(nve3,i,j,k) &
+     &                        -leftpr(nve1,i,j,k)*leftpr(nbm3,i,j,k)
+         leftco(mfbw,i,j,k) =  leftpr(nbm2,i,j,k)*leftpr(nve3,i,j,k) &
+     &                        -leftpr(nve2,i,j,k)*leftpr(nbm3,i,j,k)
+         leftco(mfbu,i,j,k) = 0.d0
+         leftco(mfbp,i,j,k) = 0.0d0  ! psi
+
+         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))
+         cts =  css  & !c_s^2*c_a^2
+     &                       +( leftpr(nbm1,i,j,k)**2  &
+     &                         +leftpr(nbm2,i,j,k)**2  &
+     &                         +leftpr(nbm3,i,j,k)**2)/leftpr(nden,i,j,k) 
+
+         leftco(mcsp,i,j,k)= sqrt((cts +sqrt(cts**2                  &
+     &                             -4.0d0*css*leftpr(nbm3,i,j,k)**2  &
+     &                                          /leftpr(nden,i,j,k)) &
+     &                            )/2.0d0)
+         leftco(mvel,i,j,k)= leftpr(nve3,i,j,k)
+         leftco(mpre,i,j,k)= ptl
+
+!==============================
+! Right 
+!==============================
+         rigtco(mudn,i,j,k)=rigtpr(nden,i,j,k)
+         rigtco(muvv,i,j,k)=rigtpr(nve1,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muvw,i,j,k)=rigtpr(nve2,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muvu,i,j,k)=rigtpr(nve3,i,j,k)*rigtpr(nden,i,j,k)
+         rigtco(muet,i,j,k)=rigtpr(nene,i,j,k)*rigtpr(nden,i,j,k) & ! internal
+     &               +0.5d0*rigtpr(nden,i,j,k)*(                  & ! kinetic
+     &                     +rigtpr(nve1,i,j,k)**2                 &
+     &                     +rigtpr(nve2,i,j,k)**2                 &
+     &                     +rigtpr(nve3,i,j,k)**2)                & 
+     &               +0.5d0*                    (                 & ! magnetic
+     &                     +rigtpr(nbm1,i,j,k)**2                 &
+     &                     +rigtpr(nbm2,i,j,k)**2                 &
+     &                     +rigtpr(nbm3,i,j,k)**2)
+
+         rigtco(mubw,i,j,k)=rigtpr(nbm1,i,j,k)  ! b_x
+         rigtco(mubu,i,j,k)=rigtpr(nbm2,i,j,k)  ! b_y
+         rigtco(mubv,i,j,k)=rigtpr(nbm3,i,j,k)  ! b_z
+         rigtco(mubp,i,j,k)=rigtpr(nbps,i,j,k)  ! psi
+
+         ptl = rigtpr(npre,i,j,k) + ( rigtpr(nbm1,i,j,k)**2 &
+     &                               +rigtpr(nbm2,i,j,k)**2 &
+     &                               +rigtpr(nbm3,i,j,k)**2)/2.0d0 
+
+         rigtco(mfdn,i,j,k)=rigtpr(nden,i,j,k)                   *rigtpr(nve3,i,j,k)
+         rigtco(mfvv,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve1,i,j,k)*rigtpr(nve3,i,j,k) &
+     &                                        -rigtpr(nbm1,i,j,k)*rigtpr(nbm3,i,j,k)
+         rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve3,i,j,k) &
+     &                                        -rigtpr(nbm2,i,j,k)*rigtpr(nbm3,i,j,k)
+         rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve3,i,j,k) &
+     &                     +ptl-rigtpr(nbm3,i,j,k)**2
+         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl)*rigtpr(nve3,i,j,k) &
+     &                     -( rigtpr(nbm1,i,j,k)*rigtpr(nve1,i,j,k)      &
+     &                       +rigtpr(nbm2,i,j,k)*rigtpr(nve2,i,j,k)      &
+     &                       +rigtpr(nbm3,i,j,k)*rigtpr(nve3,i,j,k))*rigtpr(nbm3,i,j,k)
+         rigtco(mfbv,i,j,k) =  rigtpr(nbm1,i,j,k)*rigtpr(nve3,i,j,k) &
+     &                        -rigtpr(nve1,i,j,k)*rigtpr(nbm3,i,j,k)
+         rigtco(mfbw,i,j,k) =  rigtpr(nbm2,i,j,k)*rigtpr(nve3,i,j,k) &
+     &                        -rigtpr(nve2,i,j,k)*rigtpr(nbm3,i,j,k)
+         rigtco(mfbu,i,j,k) = 0.0d0
+         rigtco(mfbp,i,j,k) = 0.0d0  ! psi
+     
+         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))
+         cts =  css  & !c_s^2*c_a^2
+     &                       +( rigtpr(nbm1,i,j,k)**2 &
+     &                         +rigtpr(nbm2,i,j,k)**2 &
+     &                         +rigtpr(nbm3,i,j,k)**2)/rigtpr(nden,i,j,k) 
+
+         rigtco(mcsp,i,j,k)= sqrt((cts +sqrt(cts**2                  &
+     &                             -4.0d0*css*rigtpr(nbm3,i,j,k)**2  &
+     &                                          /rigtpr(nden,i,j,k)) &
+     &                            )/2.0d0)
+         rigtco(mvel,i,j,k)= rigtpr(nve2,i,j,k)
+         rigtco(mpre,i,j,k)= ptl
+
+      enddo
+      enddo
+      enddo
+!$acc end kernels
+
+!$acc kernels
+!$acc loop independent
+      do j=js,je
+      do i=is,ie
+!$acc loop independent private(leftst,rigtst,nflux)
+      do k=ks,ke+1
+         leftst(:)=leftco(:,i,j,k)
+         rigtst(:)=rigtco(:,i,j,k)
+!         call HLLE(leftst,rigtst,nflux)
+         call HLLC(leftst,rigtst,nflux)
+         nflux3(mden,i,j,k)=nflux(mden)
+         nflux3(mrv1,i,j,k)=nflux(mrvv)
+         nflux3(mrv2,i,j,k)=nflux(mrvw)
+         nflux3(mrv3,i,j,k)=nflux(mrvu)
+         nflux3(meto,i,j,k)=nflux(meto)
+         nflux3(mbm1,i,j,k)=nflux(mbmv)
+         nflux3(mbm2,i,j,k)=nflux(mbmw)
+         nflux3(mbm3,i,j,k)=nflux(mbmu)
+
+         nflux3(mbm3,i,j,k) =  0.5d0*(leftst(mubp)+rigtst(mubp)) &
+     &                    -0.5d0*chg*(rigtst(mubu)-leftst(mubu))        ! finite volume
+         nflux3(mbps,i,j,k) = (0.5d0*(leftst(mubu)+rigtst(mubu)) &
+     &                    -0.5d0/chg*(rigtst(mubp)-leftst(mubp)))*chg**2 ! finite volume
+
+      enddo
+      enddo
+      enddo
+!$acc end kernels
+!$acc end data
+
+      return
+      end subroutine Numericalflux3
 
       subroutine HLLE(leftst,rigtst,nflux)
 !$acc routine seq
@@ -1439,7 +1690,9 @@
      &  (- nflux1(mden,i+1,j,k) &
      &   + nflux1(mden,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mden,i,j+1,k) &
-     &   + nflux2(mden,i,j  ,k))/(x2a(j+1)-x2a(j)) &
+     &   + nflux2(mden,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(mden,i,j,k+1) &
+     &   + nflux3(mden,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
          mv1(i,j,k) = mv1(i,j,k) &
@@ -1448,6 +1701,8 @@
      &   + nflux1(mrv1,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mrv1,i,j+1,k) &
      &   + nflux2(mrv1,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(mrv1,i,j,k+1) &
+     &   + nflux3(mrv1,i,j,k  ))/(x3a(k+1)-x3a(k)) & 
      &      )
          mv2(i,j,k) = mv2(i,j,k) &
      & +dt*( &
@@ -1455,6 +1710,8 @@
      &   + nflux1(mrv2,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mrv2,i,j+1,k) &
      &   + nflux2(mrv2,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(mrv2,i,j,k+1) &
+     &   + nflux3(mrv2,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
          mv3(i,j,k) = mv3(i,j,k)  &
@@ -1463,6 +1720,8 @@
      &   + nflux1(mrv3,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mrv3,i,j+1,k) &
      &   + nflux2(mrv3,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(mrv3,i,j,k+1) &
+     &   + nflux3(mrv3,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
           et(i,j,k) = et(i,j,k) &
@@ -1470,7 +1729,9 @@
      &  (- nflux1(meto,i+1,j,k) &
      &   + nflux1(meto,i  ,j,k))/(x1a(i+1)-x1a(i)) &
      & +(- nflux2(meto,i,j+1,k) &
-     &   + nflux2(meto,i,j  ,k))/(x2a(j+1)-x2a(j)) &
+     &   + nflux2(meto,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(meto,i,j,k+1) &
+     &   + nflux3(meto,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
           b1(i,j,k) = b1(i,j,k) &
@@ -1478,7 +1739,9 @@
      &  (- nflux1(mbm1,i+1,j,k) &
      &   + nflux1(mbm1,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mbm1,i,j+1,k) &
-     &   + nflux2(mbm1,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     &   + nflux2(mbm1,i,j  ,k))/(x2a(j+1)-x2a(j)) &  
+     & +(- nflux3(mbm1,i,j,k+1) &
+     &   + nflux3(mbm1,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
           b2(i,j,k) = b2(i,j,k) &
@@ -1487,6 +1750,8 @@
      &   + nflux1(mbm2,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mbm2,i,j+1,k) &
      &   + nflux2(mbm2,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(mbm2,i,j,k+1) &
+     &   + nflux3(mbm2,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
           b3(i,j,k) = b3(i,j,k) &
@@ -1494,7 +1759,9 @@
      &  (- nflux1(mbm3,i+1,j,k) &
      &   + nflux1(mbm3,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mbm3,i,j+1,k) &
-     &   + nflux2(mbm3,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     &   + nflux2(mbm3,i,j  ,k))/(x2a(j+1)-x2a(j)) &  
+     & +(- nflux3(mbm3,i,j,k+1) &
+     &   + nflux3(mbm3,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
           bp(i,j,k) = bp(i,j,k) &
@@ -1502,7 +1769,9 @@
      &  (- nflux1(mbps,i+1,j,k) &
      &   + nflux1(mbps,i  ,j,k))/(x1a(i+1)-x1a(i)) & 
      & +(- nflux2(mbps,i,j+1,k) &
-     &   + nflux2(mbps,i,j  ,k))/(x2a(j+1)-x2a(j)) &
+     &   + nflux2(mbps,i,j  ,k))/(x2a(j+1)-x2a(j)) & 
+     & +(- nflux3(mbps,i,j,k+1) &
+     &   + nflux3(mbps,i,j,k  ))/(x3a(k+1)-x3a(k)) &
      &      )
 
 !          write(6,*) i,j,k,bp(i,j,k)
@@ -1530,7 +1799,7 @@
       chd = 0.0d0
       ch1l = 0.0d0; ch2l = 0.0d0; ch3l = 0.0d0
       dhd = huge
-      dh1l =  huge; dh2l =  huge; dh3l =  huge      
+      dh1l =  huge; dh2l =  huge; dh3l =  huge
 !$acc loop reduction(max:chd)
       do k=ks,ke
       do j=js,je
@@ -1562,6 +1831,7 @@
       enddo
       enddo
       enddo
+
       chg      = chd
 !$acc end kernels
 
@@ -1578,7 +1848,7 @@
       real(8):: dhl,dh1l,dh2l,dh3l
       real(8),parameter:: huge=1.0d90 
 
-!$acc kernels      
+!$acc kernels  
       dh1l=huge
       dh2l=huge
       dh3l=huge
@@ -1599,7 +1869,7 @@
       enddo
       enddo
 !$acc end kernels
-      
+
       return
       end subroutine  DampPsi
 
@@ -1610,18 +1880,17 @@
       character(20),parameter::dirname="bindata/"
       character(40)::filename
       real(8),save::tout
-      data tout / 0.0d0 / 
+      data tout / 0.0d0 /
       integer::nout
       data nout / 1 /
       integer,parameter::unitout=17
       integer,parameter::unitbin=13
       integer,parameter:: gs=1
-      integer,parameter:: nvar=5
+      integer,parameter:: nvar=9
       real(8)::x1out(is-gs:ie+gs,2)
       real(8)::x2out(js-gs:je+gs,2)
-      real(8)::x3out(js-gs:je+gs,2)
-      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,nvar)
-      
+      real(8)::x3out(ks-gs:ke+gs,2)
+      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks,nvar)
 
       logical, save:: is_inited
       data is_inited /.false./
@@ -1634,6 +1903,15 @@
 
       if(time .lt. tout+dtout) return
 !$acc update host (d,v1,v2,v3,p,b1,b2,b3,bp)
+
+      write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
+      filename = trim(dirname)//filename
+
+      open(unitout,file=filename,status='replace',form='formatted')
+      write(unitout,*) "# ",time,dt
+      write(unitout,*) "# ",ngrid,gs
+      write(unitout,*) "# ",ngrid,gs
+      close(unitout)
 
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
       x1out(is-gs:ie+gs,2) = x1a(is-gs:ie+gs)
@@ -1648,18 +1926,11 @@
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = bp(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-
-
-      write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
-      filename = trim(dirname)//filename
-
-      open(unitout,file=filename,status='replace',form='formatted')
-      write(unitout,*) "# ",time,dt
-      write(unitout,*) "# ",ngrid,gs
-      write(unitout,*) "# ",ngrid,gs
-      write(unitout,*) "# ",ngrid,gs
-      close(unitout)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
       filename = trim(dirname)//filename
@@ -1676,8 +1947,9 @@
       tout=time
 
       return
+!         write(6,*) "bpf2",nflux2(mbps,i,j,k)
       end subroutine Output
-    
+
       subroutine makedirs(outdir)
       implicit none
       character(len=*), intent(in) :: outdir

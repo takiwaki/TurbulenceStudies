@@ -808,7 +808,7 @@
 !$acc loop independent
       do j=js,je
       do i=is,ie
-!$acc loop independent private(dsv,dsvp,dsvm)
+!$acc loop independent private(leftst,rigtst,nflux)
       do k=ks,ke+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
