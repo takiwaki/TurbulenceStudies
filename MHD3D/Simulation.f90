@@ -31,7 +31,7 @@
       real(8),dimension(in,jn,kn)::b1,b2,b3,bp
 
       real(8),parameter::gam=5.0d0/3.0d0
-
+      real(8),parameter::eifloor=0.1d0
       end module commons
       
       module fluxmod
@@ -70,7 +70,7 @@
       call ConsvVariable
       write(6,*) "entering main loop"
 ! main loop
-                                  write(6,*)"step","time","dt"
+                                  write(6,*)"step ","time ","dt"
       mloop: do nhy=1,nhymax
          if(mod(nhy,100) .eq. 0 ) write(6,*)nhy,time,dt
          call TimestepControl
@@ -140,6 +140,7 @@
       real(8),parameter::k_ini=2.0d0
       real(8),parameter::v0=6.0d0
       real(8),parameter::b0=6.0d0
+      real(8),parameter::p0=2.5d0
       real(8),parameter::eps=1.0d-1
 
       integer::seedsize
@@ -169,7 +170,7 @@
          v3(i,j,k) = v0*(  Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
    &                     + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)))
 
-          p(i,j,k) = 2.5d0
+          p(i,j,k) = p0
 
          b1(i,j,k) = b0*(  Ahl*sin(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)) &
    &                     + Chl*cos(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)))
@@ -192,7 +193,6 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         call random_number(x)
           ei(i,j,k) = p(i,j,k)/(gam-1.0d0)
           cs(i,j,k) = sqrt(gam*p(i,j,k)/d(i,j,k))
       enddo
@@ -357,6 +357,8 @@
      &                    +b2(i,j,k)**2   &
      &                    +b3(i,j,k)**2)
 
+          ei(i,j,k) = max(ei(i,j,k),eifloor) ! floor
+!          if(ei(i,j,k) .lt. 0.0d0) write(6,*) "sim collapse!"
            p(i,j,k) =  ei(i,j,k)*(gam-1.0d0)
           cs(i,j,k) =  sqrt(gam*p(i,j,k)/d(i,j,k))
       enddo
