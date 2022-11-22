@@ -88,8 +88,8 @@
       write(6,*) "entering main loop"
 ! main loop
       mloop: do nhy=1,nhymax
-         if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call TimestepControl
+         if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call BoundaryCondition
          call StateVevtor
          call EvaulateCh
@@ -147,13 +147,17 @@
 
       real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
       real(8),dimension(in,jn,kn)::mpsi1b,mpsi2b
+      real(8):: psinorm
 
       integer::seedsize
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8)::ampv = 1.0d-1
-      real(8)::ampb = 0.0d0
+      real(8):: v0 = 1.0d0
+      real(8):: b0 = 0.0d0
+      real(8):: p0 = 2.5d0
+      real(8),parameter:: deltax = 0.0d0,deltay = 0.0 ! randam phase
+      real(8):: eps = 1.0d-1
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -161,20 +165,21 @@
       call random_seed(get=seed)
 
       pi=acos(-1.0d0)
-
+      psinorm = 1.0d0/(2.0d0*pi*k_ini)
+      
       d(:,:,:) = 1.0d0
 
       do k=ks,ke
       do j=js,je+1
       do i=is,ie+1
-         vpsi1b(i,j,k) = ampv * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         vpsi2b(i,j,k) = ampv * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
-         mpsi1b(i,j,k) = ampb * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
-         mpsi2b(i,j,k) = ampb * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
-     &                        * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
+         vpsi1b(i,j,k) = psinorm * sin(2.0d0*pi*(k_ini*x1b(i)/(x1max-x1min)+deltax)) &
+     &                           * sin(2.0d0*pi*(k_ini*x2a(j)/(x2max-x2min)+deltay))
+         vpsi2b(i,j,k) = psinorm * sin(2.0d0*pi*(k_ini*x1a(i)/(x1max-x1min)+deltax)) &
+     &                           * sin(2.0d0*pi*(k_ini*x2b(j)/(x2max-x2min)+deltay))
+         mpsi1b(i,j,k) = psinorm * sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
+     &                           * sin(k_ini*x2a(j)*2.0d0*pi/(x2max-x2min))
+         mpsi2b(i,j,k) = psinorm * sin(k_ini*x1a(i)*2.0d0*pi/(x1max-x1min)) &
+     &                           * sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min))
       enddo
       enddo
       enddo
@@ -183,15 +188,18 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         call random_number(x)
-         v1(i,j,k) =  (vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b1(i,j,k) =  (mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b2(i,j,k) = -(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-          p(i,j,k) = 2.5d0*(1.0d0+1.0d-2*(x-0.5d0))
+         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         b1(i,j,k) =  b0*(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         b2(i,j,k) = -b0*(mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+          p(i,j,k) =  p0
          v3(i,j,k) = 0.0d0
          b3(i,j,k) = 0.0d0
          bp(i,j,k) = 0.0d0
+         call random_number(x)
+         v1(i,j,k) = v1(i,j,k) * (1.0d0+eps*(x-0.5d0))
+         call random_number(x)
+         v2(i,j,k) = v2(i,j,k) * (1.0d0+eps*(x-0.5d0))
       enddo
       enddo
       enddo
@@ -207,8 +215,6 @@
       
 
       call BoundaryCondition
-
-
 !$acc update device (d,v1,v2,v3)
 !$acc update device (p,ei,cs)
 !$acc update device (b1,b2,b3,bp)
@@ -1619,7 +1625,7 @@
       integer,parameter:: nvar=5
       real(8)::x1out(is-gs:ie+gs,2)
       real(8)::x2out(js-gs:je+gs,2)
-      real(8)::x3out(js-gs:je+gs,2)
+!      real(8)::x3out(js-gs:je+gs,2)
       real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,nvar)
       
 
@@ -1641,14 +1647,14 @@
       x2out(is-gs:ie+gs,1) = x2b(is-gs:ie+gs)
       x2out(is-gs:ie+gs,2) = x2a(is-gs:ie+gs)
 
-      x3out(ks-gs:ke+gs,1) = x3b(ks-gs:ke+gs)
-      x3out(ks-gs:ke+gs,2) = x3a(ks-gs:ke+gs)
+!      x3out(ks-gs:ke+gs,1) = x3b(ks-gs:ke+gs)
+!      x3out(ks-gs:ke+gs,2) = x3a(ks-gs:ke+gs)
 
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,1) =  d(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,1) =  d(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
 
 
       write(filename,'(a3,i5.5,a4)')"unf",nout,".dat"
@@ -1658,7 +1664,7 @@
       write(unitout,*) "# ",time,dt
       write(unitout,*) "# ",ngrid,gs
       write(unitout,*) "# ",ngrid,gs
-      write(unitout,*) "# ",ngrid,gs
+!      write(unitout,*) "# ",ngrid,gs
       close(unitout)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
@@ -1666,7 +1672,7 @@
       open(unitbin,file=filename,status='replace',form='binary') 
       write(unitbin) x1out(:,:)
       write(unitbin) x2out(:,:)
-      write(unitbin) x3out(:,:)
+!      write(unitbin) x3out(:,:)
       write(unitbin) hydout(:,:,:,:)
       close(unitbin)
 
