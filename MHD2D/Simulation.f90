@@ -28,17 +28,23 @@
       real(8),dimension(in,jn,kn)::p,ei,v1,v2,v3,cs
       real(8),dimension(in,jn,kn)::b1,b2,b3,bp
 
-      real(8),parameter::gam=5.0d0/3.0d0
-
       end module commons
+
+      module eosmod
+      implicit none
+! adiabatic
+!      real(8),parameter::gam=5.0d0/3.0d0 !! adiabatic index
+! isothermal
+      real(8)::csiso  !! isothemal sound speed
+end module eosmod
       
       module fluxmod
       use commons, only : in,jn,kn
       implicit none
       real(8):: chg
-      integer,parameter::nden=1,nve1=2,nve2=3,nve3=4,nene=5,npre=6 &
-     &                         ,nbm1=7,nbm2=8,nbm3=9,nbps=10
-      integer,parameter::nhyd=10
+      integer,parameter::nden=1,nve1=2,nve2=3,nve3=4,nene=5,npre=6,ncsp=7 &
+     &                         ,nbm1=8,nbm2=9,nbm3=10,nbps=11
+      integer,parameter::nhyd=11
       real(8),dimension(nhyd,in,jn,kn):: svc
 
       integer,parameter::mudn= 1,muvu= 2,muvv= 3,muvw= 4,muet= 5 &
@@ -120,6 +126,7 @@
 
       subroutine GenerateProblem
       use commons
+      use eosmod
       implicit none
       integer::i,j,k
       real(8)::pi
@@ -133,12 +140,13 @@
       integer,allocatable:: seed(:)
       real(8)::x
 
-      real(8),parameter:: ekin = 1.5d0
-      real(8),parameter:: emag = 1.5d0
+      real(8),parameter:: ekin = 2.0d0
+      real(8),parameter:: emag = 2.0d0
       real(8),parameter:: eint = 1.0d0
+      real(8),parameter:: d0 = 1.0d0
       real(8),parameter:: v0 = sqrt(ekin*2.0)
       real(8),parameter:: b0 = sqrt(emag*2.0)
-      real(8),parameter:: p0 = eint/(gam-1.0d0)
+      real(8)          :: p0
       real(8),parameter:: eps = 1.0d-1
       real(8),parameter:: deltax = 0.1d0,deltay = 0.2 ! randam phase
 
@@ -148,9 +156,9 @@
       call random_seed(get=seed)
 
       pi=acos(-1.0d0)
-
       psinorm = 1.0d0/(2.0d0*pi*k_ini)
-      d(:,:,:) = 1.0d0
+
+      d(:,:,:) = d0
 
       do k=ks,ke
       do j=js,je+1
@@ -166,6 +174,12 @@
       enddo
       enddo
       enddo
+
+! adiabatic
+!       p0= eint/(gam-1.0d0)
+! isotermal
+       csiso= sqrt(eint/d0)
+       p0 = d0 *csiso**2
 
       do k=ks,ke
       do j=js,je
@@ -191,8 +205,12 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
-          ei(i,j,k) = p(i,j,k)/(gam-1.0d0)
-          cs(i,j,k) = sqrt(gam*p(i,j,k)/d(i,j,k))
+! adiabatic
+!          ei(i,j,k) = p(i,j,k)/(gam-1.0d0)
+!          cs(i,j,k) = sqrt(gam*p(i,j,k)/d(i,j,k))
+! isotermal
+          ei(i,j,k) = p(i,j,k)
+          cs(i,j,k) = csiso
       enddo
       enddo
       enddo
@@ -300,6 +318,7 @@
 
       subroutine PrimVariable
       use commons
+      use eosmod
       implicit none
       integer::i,j,k
       do k=ks,ke
@@ -319,8 +338,12 @@
      &                    +b2(i,j,k)**2   &
      &                    +b3(i,j,k)**2)
 
-           p(i,j,k) =  ei(i,j,k)*(gam-1.0d0)
-          cs(i,j,k) =  sqrt(gam*p(i,j,k)/d(i,j,k))
+! adiabatic
+!           p(i,j,k) =  ei(i,j,k)*(gam-1.0d0)
+!          cs(i,j,k) =  sqrt(gam*p(i,j,k)/d(i,j,k))
+! isotermal
+           p(i,j,k) =  d(i,j,k)*csiso**2
+          cs(i,j,k) =  csiso
       enddo
       enddo
       enddo
@@ -364,6 +387,7 @@
       subroutine StateVevtor
       use commons
       use fluxmod
+      use eosmod
       implicit none
       integer::i,j,k
 
@@ -374,13 +398,19 @@
          svc(nve1,i,j,k) = v1(i,j,k)
          svc(nve2,i,j,k) = v2(i,j,k)
          svc(nve3,i,j,k) = v3(i,j,k)
-         svc(nene,i,j,k) = ei(i,j,k)/d(i,j,k)
-         svc(npre,i,j,k) = ei(i,j,k)*(gam-1.0d0)
          svc(nbm1,i,j,k) = b1(i,j,k)
          svc(nbm2,i,j,k) = b2(i,j,k)
          svc(nbm3,i,j,k) = b3(i,j,k)
          svc(nbps,i,j,k) = bp(i,j,k)
-         p(i,j,k) =  ei(i,j,k)*(gam-1.0d0) ! for output boundary 
+! adiabatic
+!         svc(nene,i,j,k) = ei(i,j,k)/d(i,j,k)
+!         svc(npre,i,j,k) = ei(i,j,k)*(gam-1.0d0)
+!         svc(ncsp,i,j,k) = sqrt(gam*(gam-1.0d0)*ei(i,j,k)/d(i,j,k))
+! isotermal
+         svc(nene,i,j,k) = csiso**2
+         svc(npre,i,j,k) = d(i,j,k)*csiso**2
+         svc(ncsp,i,j,k) = csiso
+         p(i,j,k) = svc(npre,i,j,k)  ! for output boundary 
       enddo
       enddo
 
@@ -441,7 +471,7 @@
       end subroutine MClimiter
 
       subroutine NumericalFlux1
-      use commons, only: is,ie,in,js,je,jn,ks,ke,kn,gam
+      use commons, only: is,ie,in,js,je,jn,ks,ke,kn
       use fluxmod
       implicit none
       integer::i,j,k
@@ -515,7 +545,7 @@
      &                        -leftpr(nve3,i,j,k)*leftpr(nbm1,i,j,k)
          leftco(mfbp,i,j,k) = 0.0d0  ! psi
      
-         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))
+         css =leftpr(ncsp,i,j,k)**2
          cts =  css  & !c_s^2*c_a^2
      &                       +( leftpr(nbm1,i,j,k)**2  &
      &                         +leftpr(nbm2,i,j,k)**2  &
@@ -573,7 +603,7 @@
          rigtco(mfbw,i,j,k) =  rigtpr(nbm3,i,j,k)*rigtpr(nve1,i,j,k) &
      &                        -rigtpr(nve3,i,j,k)*rigtpr(nbm1,i,j,k)
          rigtco(mfbp,i,j,k) = 0.0d0  ! b_z
-         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))
+         css =rigtpr(ncsp,i,j,k)**2
          cts =  css   &!c_s^2*c_a^2
      &                       +( rigtpr(nbm1,i,j,k)**2 &
      &                         +rigtpr(nbm2,i,j,k)**2 &
@@ -620,7 +650,7 @@
       end subroutine Numericalflux1
 
       subroutine NumericalFlux2
-      use commons, only: is,ie,in,js,je,jn,ks,ke,kn,gam
+      use commons, only: is,ie,in,js,je,jn,ks,ke,kn
       use fluxmod
       implicit none
       integer::i,j,k
@@ -692,7 +722,7 @@
      &                        -leftpr(nve3,i,j,k)*leftpr(nbm2,i,j,k)
          leftco(mfbp,i,j,k) = 0.0d0  ! psi
      
-         css =(gam*(gam-1.0d0)*leftpr(nene,i,j,k))
+         css = leftpr(ncsp,i,j,k)**2
          cts =  css  & !c_s^2*c_a^2
      &                       +( leftpr(nbm1,i,j,k)**2  &
      &                         +leftpr(nbm2,i,j,k)**2  &
@@ -747,7 +777,7 @@
      &                        -rigtpr(nve3,i,j,k)*rigtpr(nbm2,i,j,k)
          rigtco(mfbp,i,j,k) = 0.0d0  ! psi
      
-         css =(gam*(gam-1.0d0)*rigtpr(nene,i,j,k))
+         css =rigtpr(nene,i,j,k)**2
          cts =  css  & !c_s^2*c_a^2
      &                       +( rigtpr(nbm1,i,j,k)**2 &
      &                         +rigtpr(nbm2,i,j,k)**2 &
@@ -1461,7 +1491,7 @@
       do k=ks,ke
       do j=js,je
       do i=is,ie
-            css  = (gam*svc(npre,i,j,k)/ svc(nden,i,j,k))
+            css  = svc(ncsp,i,j,k)/ svc(nden,i,j,k)**2
             cts  = css  &! cs^2+c_a^2
      &          + (svc(nbm1,i,j,k)**2+svc(nbm2,i,j,k)**2+svc(nbm3,i,j,k)**2)/svc(nden,i,j,k)
             cms  = sqrt((cts +sqrt(cts**2 &
