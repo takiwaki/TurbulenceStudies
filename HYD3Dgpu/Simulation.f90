@@ -1,6 +1,7 @@
       module commons
       implicit none
       integer::nhy
+      integer,parameter:: nhymax =600000
       real(8)::time,dt
       data time / 0.0d0 /
       real(8),parameter:: timemax=5.0d0
@@ -75,8 +76,8 @@
       write(6,*) "entering main loop"
 ! main loop
       mloop: do nhy=1,80000
-         if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call TimestepControl
+         if(mod(nhy,100) .eq. 0 )write(6,*)nhy,time,dt
          call BoundaryCondition
          call StateVevtor
          call NumericalFlux1
@@ -137,16 +138,18 @@
       real(8)::pi
 
       real(8)::Ahl,Bhl,Chl
-      real(8),parameter::k_ini=4.0d0
-      real(8),parameter::v0=6.0d0
-      real(8),parameter::eps=1.0d-1
+      real(8),parameter:: k_ini=4.0d0
+      real(8),parameter:: ekin = 2.0d0
+      real(8),parameter:: emag = 0.0d0
+      real(8),parameter:: eint = 1.0d0
+      real(8),parameter:: v0 = sqrt(ekin*2.0)
+      real(8),parameter:: b0 = sqrt(emag*2.0)
+      real(8),parameter:: p0 = eint/(gam-1.0d0)
+      real(8),parameter:: eps = 1.0d-1
 
       integer::seedsize
       integer,allocatable:: seed(:)
       real(8)::x
-
-      real(8)::amp=1.0d-1
-
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -155,9 +158,9 @@
 
       pi=acos(-1.0d0)
 
-      Ahl = 1.0d-1
-      Bhl = 1.0d-1
-      Chl = 1.0d-1
+      Ahl = 0.5d0
+      Bhl = 0.5d0
+      Chl = 0.5d0
 
       d(:,:,:) = 1.0d0
 
@@ -170,7 +173,7 @@
    &                     + Ahl*cos(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)))
          v3(i,j,k) = v0*(  Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
    &                     + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)))
-          p(i,j,k) = 2.5d0
+          p(i,j,k) = p0
 
          call random_number(x)
          v1(i,j,k) = v1(i,j,k)*(1.0d0+eps*(x-0.5d0))
