@@ -1917,7 +1917,7 @@
       integer,parameter::unitout=17
       integer,parameter::unitbin=13
       integer,parameter:: gs=1
-      integer,parameter:: nvar=9
+      integer,parameter:: nvar=5
       real(8)::x1out(is-gs:ie+gs,2)
       real(8)::x2out(js-gs:je+gs,2)
       real(8)::x3out(ks-gs:ke+gs,2)
@@ -1942,6 +1942,7 @@
       write(unitout,*) "# ",time,dt
       write(unitout,*) "# ",ngrid,gs
       write(unitout,*) "# ",ngrid,gs
+      write(unitout,*) "# ",ngrid,gs
       close(unitout)
 
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
@@ -1957,10 +1958,6 @@
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,2) = v1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b1(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b2(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = b3(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) = bp(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
