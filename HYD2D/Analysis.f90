@@ -10,8 +10,8 @@ module fieldmod
     real(8),dimension(:),allocatable:: x1a,x2a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
     real(8),dimension(:,:,:),allocatable:: vor
+    real(8),dimension(:,:,:),allocatable:: kin
     real(8):: dx,dy
-    real(8):: Etot,Vtot
 end module fieldmod
 
 program data_analysis
@@ -110,6 +110,7 @@ subroutine Vorticity
 
   if(.not. is_inited)then
      allocate( vor(in,jn,kn))
+     allocate( kin(in,jn,kn))
      is_inited = .true.
   endif
 
@@ -120,6 +121,10 @@ subroutine Vorticity
                &+(v2(i+1,j,k)-v2(i  ,j,k))/dx*0.5 &
                &-(v1(i,j  ,k)-v1(i,j-1,k))/dy*0.5 &
                &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5 
+     kin(i,j,k)= 0.5d0*d(i,j,k)*( &
+               & +v1(i,j,k)*v1(i,j,k) &
+               & +v2(i,j,k)*v2(i,j,k) &
+               & )
   enddo
   enddo
 
@@ -128,10 +133,10 @@ subroutine Vorticity
   open(unitvor,file=filename,status='replace',form='formatted')
 
   write(unitvor,*) "# ",time
-  write(unitvor,*) "# x y omega_z"
+  write(unitvor,*) "# x y omega_z E_kin"
   do j=js,je
   do i=is,ie
-     write(unitvor,'(3(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k)
+     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),kin(i,j,k)
   enddo
      write(unitvor,*)
   enddo
@@ -242,7 +247,7 @@ subroutine Fourier
   filename = trim(dirname)//filename
   open(unittot,file=filename,status='replace',form='formatted')
   do rk=1,nk
-     write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
+     write(unittot,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
   enddo
   close(unittot)
 
