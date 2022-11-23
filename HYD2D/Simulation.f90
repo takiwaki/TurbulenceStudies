@@ -28,15 +28,15 @@
       real(8),dimension(in,jn,kn)::d,et,mv1,mv2,mv3
       real(8),dimension(in,jn,kn)::p,ei,v1,v2,v3,cs
       end module commons
-      
+     
       module eosmod
       implicit none
 ! adiabatic
-!      real(8),parameter::gam=5.0d0/3.0d0
+!      real(8),parameter::gam=5.0d0/3.0d0 !! adiabatic index
 ! isothermal
-      real(8)::csiso
+      real(8)::csiso  !! isothemal sound speed
 end module eosmod
-      
+
       module fluxmod
       use commons, only : in,jn,kn
       implicit none
@@ -127,8 +127,8 @@ end module eosmod
       real(8),parameter:: d0 = 1.0d0
       real(8),parameter:: v0 = sqrt(ekin*2.d0/d0)
       real(8),parameter:: b0 = sqrt(emag*2.0)
+      real(8)          :: p0
       real(8),parameter:: eps = 1.0d-1
-      real(8):: p0 
 
       call random_seed(size=seedsize)
       write(6,*)"seed size",seedsize
@@ -347,6 +347,7 @@ end module eosmod
          svc(nene,i,j,k) = csiso**2
          svc(npre,i,j,k) = d(i,j,k)*csiso**2
          svc(ncsp,i,j,k) = csiso
+         p(i,j,k) = svc(npre,i,j,k)  ! for output boundary 
       enddo
       enddo
 

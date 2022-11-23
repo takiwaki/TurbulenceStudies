@@ -6,12 +6,15 @@ dirm := movies
 BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
 VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
 VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+JCDPNG=$(patsubst ${dira}/vor%.dat,${dirf}/jcd%.png,$(VOR))
 
 exe=Simulation.x
 ana=Analysis.x
 
 countfile=control.dat
-moviefile=${dirm}/anivor.mp4
+vormovie=${dirm}/anivor.mp4
+jcdmovie=${dirm}/anijcd.mp4
+moviefile=${vormovie} ${jcdmovie}
 specfile=k-E_k.png
 
 #################
@@ -29,10 +32,13 @@ all: ${exe} ${moviefile} ${specfile}
 # ffmpeg
 #################
 
-movie: ${moviefile}
+movie: ${jcdmovie} ${vormovie}
 
-${moviefile}: MakeMovie.sh ${VORPNG}
+${vormovie}: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
+
+${jcdmovie}: MakeMovie.sh ${JCDPNG}
+	./MakeMovie.sh jcd
 
 #################
 # gnuplot
@@ -43,9 +49,12 @@ spectrum: ${specfile}
 ${specfile}: spectrum.plt
 	gnuplot spectrum.plt
 
-2Dsnaps: ${VORPNG}
+2Dsnaps: ${VORPNG} ${JCDPNG}
 
 ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
+${JCDPNG}: vor.plt MakeSnap.sh ${JCD}
 	./MakeSnap.sh vor.plt
 
 #################
