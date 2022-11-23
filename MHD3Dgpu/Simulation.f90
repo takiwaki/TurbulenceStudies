@@ -1942,6 +1942,7 @@
       write(unitout,*) "# ",time,dt
       write(unitout,*) "# ",ngrid,gs
       write(unitout,*) "# ",ngrid,gs
+      write(unitout,*) "# ",ngrid,gs
       close(unitout)
 
       x1out(is-gs:ie+gs,1) = x1b(is-gs:ie+gs)
