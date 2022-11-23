@@ -237,9 +237,10 @@ subroutine Fourier
   implicit none
   integer::i,j,k
   integer::ik,jk,kk,rk
-  integer,parameter:: nk=100
+  integer,parameter:: nk=128
   integer,parameter:: nvar=4
   real(8),dimension(nvar):: X
+  real(8),dimension(nvar):: Xtot
   real(8),dimension(nk,nk,nvar):: Xhat2Dc,Xhat2Ds
   real(8),dimension(nk):: kx,ky
   real(8),dimension(nk,nvar):: Xhat1D
@@ -248,32 +249,39 @@ subroutine Fourier
   character(20),parameter::dirname="output/"
   character(40)::filename
   integer,parameter::unitspc=21
+  integer,parameter::unittot=22
   real(8):: pi
 
   pi=acos(-1.0d0)
 
   k=1
   
-  Etot=0.0d0
-  Vtot=0.0d0
+  Xtot(:)=0.0d0
   do j=js,je
   do i=is,ie
-     Etot = Etot &
+     Xtot(1) = Xtot(1) &
  &    + 0.5d0*d(i,j,k)                              &
  &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  & 
  &    *dx*dy
 
-     Vtot = Vtot &
+     Xtot(2) =  Xtot(2) &
  &    + vor(i,j,k)**2                               & 
  &    *dx*dy
 
-     Mtot = Mtot &
+     Xtot(3) = Xtot(3) &
  &    + mpt(i,j,k)**2                               & 
  &    *dx*dy
 
-     Ctot = Ctot &
+     Xtot(4) = Xtot(4) &
  &    + Hcr(i,j,k)                                  & 
  &    *dx*dy
+
+  enddo
+  enddo
+
+  do j=js,je
+  do i=is,ie
+
 
   enddo
   enddo
@@ -323,7 +331,7 @@ subroutine Fourier
   do jk=1,nk
      kr = sqrt(kx(ik)**2+ky(jk)**2)
      rk = min(nk,int(kr/dkr))
-     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat2Dc(ik,jk,1:nvar)**2 + Xhat2Ds(ik,jk,1:nvar)**2)*dkx*dky 
+     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat2Dc(ik,jk,1:nvar)**2 + Xhat2Ds(ik,jk,1:nvar)**2)*dkx*dky/dkr
   enddo
   enddo
 
@@ -332,12 +340,20 @@ subroutine Fourier
   open(unitspc,file=filename,status='replace',form='formatted')
   write(unitspc,*) "# ",time
   do rk=1,nk
-     write(unitspc,'(6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Etot &
-                                  &       ,Xhat1D(rk,2)/Vtot &
-                                  &       ,Xhat1D(rk,3)/Mtot &
-                                  &       ,Xhat1D(rk,4)/Ctot
+     write(unitspc,'(6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) &
+                                  &       ,Xhat1D(rk,2)/Xtot(1) &
+                                  &       ,Xhat1D(rk,3)/Xtot(1) &
+                                  &       ,Xhat1D(rk,4)/Xtot(1)
   enddo
   close(unitspc)
+
+  write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
+  filename = trim(dirname)//filename
+  open(unittot,file=filename,status='replace',form='formatted')
+  do rk=1,nk
+     write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4)
+  enddo
+  close(unittot)
 
   return
 end subroutine Fourier

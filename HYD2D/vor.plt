@@ -86,6 +86,15 @@ set label 2 "PLM" at screen 0.3, screen 0.845
 splot  \
   ifnames u ($1):($2):3 w pm3d  \
 
+ofname = sprintf("figures/kin%05d.png",ifnum)
+set output ofname
+
+maxcb=2.0
+set cbrange [0:maxcb]
+splot  \
+  ifnames u ($1):($2):4 w pm3d  \
+
+
 unset label 1
 
 reset
