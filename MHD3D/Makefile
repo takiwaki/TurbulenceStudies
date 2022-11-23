@@ -5,10 +5,12 @@ dirm := movies
 
 BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
 VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+SPC= $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
 VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 
 exe=Simulation.x
 ana=Analysis.x
+vis=Visualization.x
 
 countfile=control.dat
 moviefile=${dirm}/anivor.mp4
@@ -49,6 +51,19 @@ ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
 
 #################
+# visualization
+#################
+
+HDF5 = /home/takiwkkz/hdf5
+FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran 
+
+${vis}: Visualization.f90
+	${fc} ${fopt} ${FLAGHDF} $< -o ${vis}
+
+${VOR}: ${vis} ${BIN} ${countfile}
+	./${vis}
+
+#################
 # analysis
 #################
 
@@ -62,8 +77,9 @@ run-analysis: ${ana} ${count}
 ${countfile}: Init.sh
 	./Init.sh
 
-${VOR}: ${ana} ${BIN} ${countfile}
+${SPC}: ${ana} ${BIN} ${countfile}
 	./${ana}
+
 
 #################
 # simulation
@@ -91,4 +107,6 @@ clean:
 	rm -f ${exe} ${ana} *.o *.mod *~
 
 allclean:
-	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${countfile}
+	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${count}
+
+
