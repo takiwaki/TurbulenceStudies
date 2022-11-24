@@ -1,27 +1,82 @@
-dird := bindata
-dira := output
-dirf := figures
-dirm := movies
+##########################################
+# Makefile for Turbulence Studies
+##########################################
 
-BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
-VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
-SPC= $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
-VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+##########################################
+# Programs
+##########################################
 
 exe=Simulation.x
 ana=Analysis.x
 vis=Visualization.x
 
-countfile=control.dat
-moviefile=${dirm}/anivor.mp4
-specfile=k-E_k.png
-
-#################
+######################	
 # complile options
-#################
+######################
 fc=ifort -extend-source
-fopt=-g -traceback -O2
 #fopt=-g -traceback -check all -fpe0
+
+HDF5 = /home/takiwkkz/hdf5
+FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran 
+
+##########################################
+# Timeseqencial data and figures
+##########################################
+
+######################
+# directory
+######################
+
+dird := bindata
+dira := output
+dirf := figures
+dirm := movies
+
+countfile=control.dat
+
+######################
+# files
+######################
+
+filename = ${dird}/unf00001.dat
+fileexists = $(shell ls | grep ${filename})
+ifeq (${fileexists}, ${filename})
+    BIN= $(shell ls ${dird}/unf*.dat)
+else
+    BIN= ${filename}
+endif
+
+VOR   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
+JCDPNG= $(patsubst ${dira}/vor%.dat,${dirf}/jcd%.png,$(VOR))
+MAGPNG= $(patsubst ${dira}/vor%.dat,${dirf}/mag%.png,$(VOR))
+
+SPC   = $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
+HKSPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hks%.png,$(SPC))
+KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
+HCRPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hcr%.png,$(SPC))
+HMMPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hmm%.png,$(SPC))
+MSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/msp%.png,$(SPC))
+
+##########################################
+# Movies
+##########################################
+
+# 2D snaps evolution
+vormovie=${dirm}/anivor.mp4
+kinmovie=${dirm}/anikin.mp4
+jcdmovie=${dirm}/anijcd.mp4
+magmovie=${dirm}/animag.mp4
+
+# spectrum evolution
+kspmovie=${dirm}/aniksp.mp4
+hksmovie=${dirm}/anihks.mp4
+hcrmovie=${dirm}/anihcr.mp4
+hmmmovie=${dirm}/anihmm.mp4
+mspmovie=${dirm}/animsp.mp4
+
+moviefile=${vormovie} ${kinmovie} ${jcdmovie} ${magmovie} ${kspmovie} ${hksmovie} ${hcrmovie} ${hmmmovie} ${mspmovie}
 
 all: ${exe} ${moviefile}
 
@@ -33,8 +88,34 @@ all: ${exe} ${moviefile}
 
 movie: ${moviefile}
 
-${moviefile}: MakeMovie.sh ${VORPNG}
+${vormovie}: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
+
+${kinmovie}: MakeMovie.sh ${KINPNG}
+	./MakeMovie.sh kin
+
+${jcdmovie}: MakeMovie.sh ${JCDPNG}
+	./MakeMovie.sh jcd
+
+${magmovie}: MakeMovie.sh ${MAGPNG}
+	./MakeMovie.sh mag
+
+# 5 kinds of spectrum
+
+${kspmovie}: MakeMovie.sh ${KSPPNG}
+	./MakeMovie.sh ksp
+
+${hksmovie}: MakeMovie.sh ${HKSPNG}
+	./MakeMovie.sh hks
+
+${hcrmovie}: MakeMovie.sh ${HCRPNG}
+	./MakeMovie.sh hcr
+
+${hmmmovie}: MakeMovie.sh ${MPTPNG}
+	./MakeMovie.sh hmm
+
+${mspmovie}: MakeMovie.sh ${MSPPNG}
+	./MakeMovie.sh msp
 
 #################
 # gnuplot
@@ -50,12 +131,19 @@ ${specfile}: spectrum.plt
 ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
 
+${JCDPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
+${KINPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
+${MAGPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
 #################
 # visualization
 #################
 
-HDF5 = /home/takiwkkz/hdf5
-FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran 
 
 ${vis}: Visualization.f90
 	${fc} ${fopt} ${FLAGHDF} $< -o ${vis}
@@ -67,19 +155,13 @@ ${VOR}: ${vis} ${BIN} ${countfile}
 # analysis
 #################
 
-analysis-code: ${ana} 
-
 count-number: ${countfile}
 
-run-analysis: ${ana} ${count}
-	./${ana}
-
-${countfile}: Init.sh
-	./Init.sh
+${countfile}: CountBindata.sh
+	./CountBindata.sh
 
 ${SPC}: ${ana} ${BIN} ${countfile}
 	./${ana}
-
 
 #################
 # simulation

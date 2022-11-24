@@ -148,7 +148,7 @@ end module eosmod
       real(8),parameter::k_ini=2.0d0
 
       real(8),parameter:: ekin = 2.0d0
-      real(8),parameter:: emag = 0.0d0
+      real(8),parameter:: emag = 2.0d0
       real(8),parameter:: eint = 1.0d0
       real(8),parameter:: d0 = 1.0d0
       real(8),parameter:: v0 = sqrt(ekin*2.d0/d0)

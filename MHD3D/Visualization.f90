@@ -506,7 +506,7 @@ subroutine Snap2D
   write(unitvor,*) "# x y omega_z"
   do j=js,je
   do i=is,ie
-     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor3(i,j,k),kin(i,j,k)
+     write(unitvor,'(6(1x,E12.3))') x1b(i),x2b(j),vor3(i,j,k),jcd3(i,j,k),kin(i,j,k),mag(i,j,k)
   enddo
      write(unitvor,*)
   enddo
