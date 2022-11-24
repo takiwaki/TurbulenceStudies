@@ -58,6 +58,8 @@ set yrange [-0.5:0.5]
 # Vorticity
 ##########################
 
+set title "Vorticity"
+
 #maxcb=20.0
 #set cbrange [-maxcb:maxcb]
 set cbrange [*:*]
@@ -77,6 +79,8 @@ splot  \
 ##########################
 # Kinetic energy
 ##########################
+
+set title "KInetic energy"
 
 ofname = sprintf("figures/kin%05d.png",ifnum)
 set output ofname
