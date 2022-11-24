@@ -10,6 +10,7 @@ module fieldmod
     real(8),dimension(:),allocatable:: x1a,x2a,x3a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
     real(8),dimension(:,:,:),allocatable:: vor1,vor2,vor3
+    real(8),dimension(:,:,:),allocatable:: kin,hk
     real(8):: dx,dy,dz
 
 !$acc declare create(incr)
@@ -26,6 +27,7 @@ module fieldmod
       
 !$acc declare create(d,v1,v2,v3,p)
 !$acc declare create(vor1,vor2,vor3)
+!$acc declare create(kin,hk)
 
 !$acc declare create(dx,dy,dz)
 
@@ -140,7 +142,10 @@ subroutine Vorticity
      allocate( vor1(in,jn,kn))
      allocate( vor2(in,jn,kn))
      allocate( vor3(in,jn,kn))
+     allocate(  kin(in,jn,kn))
+     allocate(   hk(in,jn,kn))
 !$acc update device (vor1,vor2,vor3)
+!$acc update device (kin,hk)
      is_inited = .true.
   endif
 
@@ -161,6 +166,13 @@ subroutine Vorticity
                 &+(v2(i+1,j,k)-v2(i  ,j,k))/dx*0.5 &
                 &-(v1(i,j  ,k)-v1(i,j-1,k))/dy*0.5 &
                 &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5 
+      kin(i,j,k)= 0.5d0*d(i,j,k)*( v1(i,j,k)*v1(i,j,k) &
+                &                 +v2(i,j,k)*v2(i,j,k) &
+                &                 +v3(i,j,k)*v3(i,j,k))
+
+       hk(i,j,k)=  v1(i,j,k)*vor1(i,j,k) &
+                & +v2(i,j,k)*vor2(i,j,k) &
+                & +v3(i,j,k)*vor3(i,j,k)
   enddo
   enddo
   enddo
@@ -186,30 +198,25 @@ subroutine Fourier
   character(20),parameter::dirname="output/"
   character(40)::filename
   integer,parameter::unitspc=21
+  integer,parameter::unittot=22
+  
   real(8):: pi
 
-  pi=acos(-1.0d0)
-
-
 !$acc kernels
+  pi=acos(-1.0d0)
   Xtot(:)=0.0d0
 !$acc loop reduction(+:X)
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     X(1) = X(1) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k)+ v3(i,j,k)*v3(i,j,k))  & 
- &    *dx*dy*dz
-
-     X(2) = X(2) &
- &    + vor3(i,j,k)**2                               & 
- &    *dx*dy*dz
+     Xtot(1) = Xtot(1) + kin(i,j,k)*dx*dy*dz
+     Xtot(2) = Xtot(2) +  hk(i,j,k)*dx*dy*dz
   enddo
   enddo
   enddo
 !$acc end kernels
 
+!$acc kernels
   dkx = 1.0d0/(dx*in)
   dky = 1.0d0/(dy*jn)
   dkz = 1.0d0/(dz*jn)
@@ -224,20 +231,19 @@ subroutine Fourier
      ky(kk) = kk *dkz
   enddo
 
-!$acc kernels
   Xhat3D(:,:,:,:,:) = 0.0d0
 
-!$acc loop reduction(+:Xhat3D) private(X)
+!$acc loop independent
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk
-
+!$acc loop reduction(+:Xhat3D) private(X) 
   do k=ks,ke
   do j=js,je
   do i=is,ie
      
-     X(1) =0.5d0*d(i,j,k)*(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k) + v3(i,j,k)*v3(i,j,k))
-     X(2) = v1(i,j,k)*vor1(i,j,k)+ v2(i,j,k)*vor2(i,j,k)+ v3(i,j,k)*vor3(i,j,k)
+     X(1) =kin(i,j,k)
+     X(2) = hk(i,j,k)
 
      Xhat3D(ik,jk,kk,1,1:nvar) = Xhat3D(ik,jk,kk,1,1:nvar) &
  &    + X(1:nvar) &
@@ -275,7 +281,7 @@ subroutine Fourier
   enddo
 !$acc end kernels
 
-!$acc update host (Xhat1D)
+!$acc update host (dkr,Xtot,Xhat1D)
 
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
@@ -285,6 +291,12 @@ subroutine Fourier
      write(unitspc,'(3(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1),Xhat1D(rk,2)/Xtot(2)
   enddo
   close(unitspc)
+
+  write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
+  filename = trim(dirname)//filename
+  open(unittot,file=filename,status='replace',form='formatted')
+  write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4)
+  close(unittot)
 
   return
 end subroutine Fourier
