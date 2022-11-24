@@ -140,6 +140,23 @@ ${KINPNG}: vor.plt MakeSnap.sh ${VOR}
 ${MAGPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
 
+
+${KSPPNG}: vor.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+${HKSPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+${HCRPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+${MSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+${HMMPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+
 #################
 # visualization
 #################
