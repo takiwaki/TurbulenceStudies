@@ -1101,7 +1101,7 @@
      &                             -4.0d0*css*rigtpr(nbm3,i,j,k)**2  &
      &                                          /rigtpr(nden,i,j,k)) &
      &                            )/2.0d0)
-         rigtco(mvel,i,j,k)= rigtpr(nve2,i,j,k)
+         rigtco(mvel,i,j,k)= rigtpr(nve3,i,j,k)
          rigtco(mpre,i,j,k)= ptl
 
       enddo
