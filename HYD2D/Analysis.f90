@@ -132,8 +132,8 @@ subroutine Vorticity
   filename = trim(dirname)//filename
   open(unitvor,file=filename,status='replace',form='formatted')
 
-  write(unitvor,*) "# ",time
-  write(unitvor,*) "# x y omega_z E_kin"
+  write(unitvor,'(1a,4(1x,E12.3))') "#",time
+  write(unitvor,'(1a,4(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:E_kin "
   do j=js,je
   do i=is,ie
      write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),kin(i,j,k)
@@ -236,19 +236,17 @@ subroutine Fourier
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
   open(unitspc,file=filename,status='replace',form='formatted')
-  write(unitspc,*) "# ",time
+  write(unitspc,'(1a,1(1x,E12.3))') "#",time
   do rk=1,nk
-     write(unitspc,'(6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) &
-                                  &       ,Xhat1D(rk,2)/Xtot(2)
+     write(unitspc,'(1x,6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) & ! kinetic energy
+                                           & ,Xhat1D(rk,2)/Xtot(2)   ! enstrophy
   enddo
   close(unitspc)
 
   write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
   filename = trim(dirname)//filename
   open(unittot,file=filename,status='replace',form='formatted')
-  do rk=1,nk
-     write(unittot,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
-  enddo
+  write(unittot,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
   close(unittot)
 
   return
@@ -289,9 +287,9 @@ subroutine Probability
   write(filename,'(a3,i5.5,a4)')"pro",incr,".dat"
   filename = trim(dirname)//filename
   open(unitpro,file=filename,status='replace',form='formatted')
-  write(unitpro,*) "# ",time
+  write(unitpro,'(1a,1(1x,E12.3))') "#",time
   do n=-np,np
-     write(unitpro,'(4(1x,E12.3))') vxmax/np*n, vxpro(n), vymax/np*n, vypro(n)
+     write(unitpro,'(1x,4(1x,E12.3))') vxmax/np*n, vxpro(n), vymax/np*n, vypro(n)
   enddo
   close(unitpro)
 
