@@ -201,6 +201,7 @@ end module eosmod
 ! isotermal
        csiso= sqrt(eint/d0)
        p0 = d0 *csiso**2
+!$acc update device (csiso)
 
       do k=ks,ke
       do j=js,je
@@ -1659,7 +1660,8 @@ end module eosmod
       real(8)::x1out(is-gs:ie+gs,2)
       real(8)::x2out(js-gs:je+gs,2)
 !      real(8)::x3out(js-gs:je+gs,2)
-      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,nvar)
+!      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks-gs:ke+gs,nvar) ! 3D
+      real(8)::hydout(is-gs:ie+gs,js-gs:je+gs,ks,nvar) ! 2D
       
 
       logical, save:: is_inited
@@ -1700,7 +1702,7 @@ end module eosmod
       open(unitout,file=filename,status='replace',form='formatted')
       write(unitout,*) "# ",time,dt
       write(unitout,*) "# ",ngrid,gs
-      write(unitout,*) "# ",ngrid,gs
+      write(unitout,*) "# ",ngrid,gs 
 !      write(unitout,*) "# ",ngrid,gs
       close(unitout)
 
