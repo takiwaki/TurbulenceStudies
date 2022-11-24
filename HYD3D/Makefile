@@ -1,29 +1,69 @@
-dird := bindata
-dira := output
-dirf := figures
-dirm := movies
+##########################################
+# Makefile for Turbulence Studies
+##########################################
 
-BIN= ${dird}/unf00001.dat $(shell ls ${dird}/unf*.dat)
-VOR= $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
-SPC= $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
-VORPNG=$(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+##########################################
+# Programs
+##########################################
 
 exe=Simulation.x
 ana=Analysis.x
 vis=Visualization.x
 
-countfile=control.dat
-moviefile=${dirm}/anivor.mp4
-specfile=k-E_k.png
-
-#################
+######################	
 # complile options
-#################
+######################
 fc=ifort -extend-source
 fopt=-g -traceback -O2
 #fopt=-g -traceback -check all -fpe0
 
-all: ${exe} ${moviefile}
+##########################################
+# Timeseqencial data and figures
+##########################################
+
+######################
+# directory
+######################
+
+dird := bindata
+dira := output
+dirf := figures
+dirm := movies
+
+countfile=control.dat
+
+######################
+# files
+######################
+
+filename = ${dird}/unf00001.dat
+fileexists = $(shell ls | grep ${filename})
+ifeq (${fileexists}, ${filename})
+    BIN= $(shell ls ${dird}/unf*.dat)
+else
+    BIN= ${filename}
+endif
+
+VOR   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
+
+SPC   = $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
+KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
+HKSPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hks%.png,$(SPC))
+
+##########################################
+# Movies
+##########################################
+
+kinmovie=${dirm}/anikin.mp4
+vormovie=${dirm}/anivor.mp4
+kspmovie=${dirm}/aniksp.mp4
+hksmovie=${dirm}/anihks.mp4
+
+moviefile=${vormovie} ${kinmovie} ${kspmovie} ${hksmovie}
+
+all: ${exe} ${ana} ${vis} ${moviefile}
 
 .PHONY: all clean allclean
 
@@ -33,8 +73,17 @@ all: ${exe} ${moviefile}
 
 movie: ${moviefile}
 
-${moviefile}: MakeMovie.sh ${VORPNG}
+${vormovie}: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
+
+${kinmovie}: MakeMovie.sh ${KINPNG}
+	./MakeMovie.sh kin
+
+${kspmovie}: MakeMovie.sh ${KSPPNG}
+	./MakeMovie.sh ksp
+
+${hksmovie}: MakeMovie.sh ${HKSPNG}
+
 
 #################
 # gnuplot
