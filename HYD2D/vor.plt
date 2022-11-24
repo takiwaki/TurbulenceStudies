@@ -80,7 +80,7 @@ splot  \
 # Kinetic energy
 ##########################
 
-set title "KInetic energy"
+set title "Kinetic energy"
 
 ofname = sprintf("figures/kin%05d.png",ifnum)
 set output ofname
