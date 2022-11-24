@@ -19,6 +19,7 @@ set style line 91 lt 1 lw 2 lc rgb "black" #
 set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
+if (exist("ifnum")==0 ) ifnum=100
 input= sprintf("output/spc%05d.dat",ifnum)
 
 ##########################################
@@ -44,15 +45,15 @@ plot NaN notitle \
 #, (0.1)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
 ##########################################
-# Enstrophy
+# Kinetic helicity
 ##########################################
 
-outputfile= sprintf("figures/vsp%05d.png",ifnum)
+outputfile= sprintf("figures/hks%05d.png",ifnum)
 if(pngflag==1)set output outputfile
 set log 
 set format y "10^{%L}"
 
-set ylabel "Enstrophy"
+set ylabel "Kinematic helicity"
 
 plot NaN notitle \
 , input  u 1:3  notitle w l ls 1  \
@@ -60,3 +61,4 @@ plot NaN notitle \
 
 reset
 set term pop
+

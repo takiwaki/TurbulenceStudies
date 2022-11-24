@@ -260,10 +260,10 @@ subroutine Fourier
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
   open(unitspc,file=filename,status='replace',form='formatted')
-  write(unitspc,*) "# ",time
+  write(unitspc,'(1a,1(1x,E12.3))') "# ",time
   do rk=1,nk
-     write(unitspc,'(3(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) &
-                                         &,Xhat1D(rk,2)/Xtot(2)
+     write(unitspc,'(1x,3(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/abs(Xtot(1)) & ! kinetic energy
+                                         &,Xhat1D(rk,2)                ! kinetic helicity
   enddo
   close(unitspc)
 
