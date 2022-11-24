@@ -168,7 +168,7 @@
       real(8),parameter::k_ini=2.0d0
       
       real(8),parameter:: ekin = 2.0d0
-      real(8),parameter:: emag = 0.0d0
+      real(8),parameter:: emag = 2.0d0
       real(8),parameter:: eint = 1.0d0
       real(8),parameter:: d0 = 1.0d0
       real(8),parameter:: v0 = sqrt(ekin*2.d0/d0)
@@ -197,7 +197,8 @@
 !       p0= eint/(gam-1.0d0)
 ! isotermal
        csiso= sqrt(eint/d0)
-       p0 = d0 *csiso**2
+       p0 = d0 *csiso**2       
+!$acc update device (csiso)
        
       do k=ks,ke
       do j=js,je
@@ -1063,9 +1064,9 @@
      &                     +rigtpr(nbm2,i,j,k)**2                 &
      &                     +rigtpr(nbm3,i,j,k)**2)
 
-         rigtco(mubw,i,j,k)=rigtpr(nbm1,i,j,k)  ! b_x
-         rigtco(mubu,i,j,k)=rigtpr(nbm2,i,j,k)  ! b_y
-         rigtco(mubv,i,j,k)=rigtpr(nbm3,i,j,k)  ! b_z
+         rigtco(mubv,i,j,k)=rigtpr(nbm1,i,j,k)  ! b_x
+         rigtco(mubw,i,j,k)=rigtpr(nbm2,i,j,k)  ! b_y
+         rigtco(mubu,i,j,k)=rigtpr(nbm3,i,j,k)  ! b_z
          rigtco(mubp,i,j,k)=rigtpr(nbps,i,j,k)  ! psi
 
          ptl = rigtpr(npre,i,j,k) + ( rigtpr(nbm1,i,j,k)**2 &

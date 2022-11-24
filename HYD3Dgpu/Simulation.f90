@@ -198,6 +198,7 @@
 ! isotermal
        csiso= sqrt(eint/d0)
        p0 = d0 *csiso**2
+!$acc update device (csiso)
        
       do k=ks,ke
       do j=js,je
