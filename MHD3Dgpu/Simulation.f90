@@ -1021,8 +1021,8 @@
          leftco(mfvw,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve2,i,j,k)*leftpr(nve3,i,j,k) &
      &                                        -leftpr(nbm2,i,j,k)*leftpr(nbm3,i,j,k)
          leftco(mfvu,i,j,k)=leftpr(nden,i,j,k)*leftpr(nve3,i,j,k)*leftpr(nve3,i,j,k) &
-     &                     +leftpr(npre,i,j,k)-leftpr(nbm3,i,j,k)**2
-         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl)*leftpr(nve3,i,j,k) &
+     &                     +ptl               -leftpr(nbm3,i,j,k)*leftpr(nbm3,i,j,k)
+         leftco(mfet,i,j,k)=(leftco(muet,i,j,k)+ptl                )*leftpr(nve3,i,j,k) &
      &                     -( leftpr(nbm1,i,j,k)*leftpr(nve1,i,j,k)     &
      &                       +leftpr(nbm2,i,j,k)*leftpr(nve2,i,j,k)     &
      &                       +leftpr(nbm3,i,j,k)*leftpr(nve3,i,j,k))*leftpr(nbm3,i,j,k)
@@ -1079,8 +1079,8 @@
          rigtco(mfvw,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve2,i,j,k)*rigtpr(nve3,i,j,k) &
      &                                        -rigtpr(nbm2,i,j,k)*rigtpr(nbm3,i,j,k)
          rigtco(mfvu,i,j,k)=rigtpr(nden,i,j,k)*rigtpr(nve3,i,j,k)*rigtpr(nve3,i,j,k) &
-     &                     +ptl-rigtpr(nbm3,i,j,k)**2
-         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl)*rigtpr(nve3,i,j,k) &
+     &                     +ptl               -rigtpr(nbm3,i,j,k)*rigtpr(nbm3,i,j,k)
+         rigtco(mfet,i,j,k)=(rigtco(muet,i,j,k)+ptl                )*rigtpr(nve3,i,j,k) &
      &                     -( rigtpr(nbm1,i,j,k)*rigtpr(nve1,i,j,k)      &
      &                       +rigtpr(nbm2,i,j,k)*rigtpr(nve2,i,j,k)      &
      &                       +rigtpr(nbm3,i,j,k)*rigtpr(nve3,i,j,k))*rigtpr(nbm3,i,j,k)
