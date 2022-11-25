@@ -204,8 +204,9 @@ subroutine Fourier
 
 !$acc kernels
   pi=acos(-1.0d0)
-  Xtot(:)=0.0d0
-!$acc loop reduction(+:X)
+  Xtot(1)=0.0d0
+  Xtot(2)=0.0d0
+!$acc loop reduction(+:Xtot)
   do k=ks,ke
   do j=js,je
   do i=is,ie
@@ -231,17 +232,16 @@ subroutine Fourier
      ky(kk) = kk *dkz
   enddo
 
-  Xhat3D(:,:,:,:,:) = 0.0d0
 
 !$acc loop independent
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk
-!$acc loop reduction(+:Xhat3D) private(X) 
+     Xhat3D(ik,jk,kk,:,:) = 0.0d0
+!$acc loop reduction(+:Xhat3D) private(X)
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     
      X(1) =kin(i,j,k)
      X(2) = hk(i,j,k)
 

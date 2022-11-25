@@ -1,7 +1,7 @@
       module commons
       implicit none
       integer::nhy
-      integer,parameter::nhymax=80000 
+      integer,parameter::nhymax=1600000
       real(8)::time,dt
       data time / 0.0d0 /
       real(8),parameter:: timemax=5.0d0
@@ -97,7 +97,7 @@
                                   write(6,*)"step","time","dt"
       mloop: do nhy=1,nhymax
          call TimestepControl
-         if(mod(nhy,100) .eq. 0 ) write(6,*)nhy,time,dt
+         if(mod(nhy,300) .eq. 0 ) write(6,*)nhy,time,dt
          call BoundaryCondition
          call StateVevtor
          call EvaulateCh
@@ -168,7 +168,7 @@
       real(8),parameter::k_ini=2.0d0
       
       real(8),parameter:: ekin = 2.0d0
-      real(8),parameter:: emag = 2.0d0
+      real(8),parameter:: emag = 1.0d0
       real(8),parameter:: eint = 1.0d0
       real(8),parameter:: d0 = 1.0d0
       real(8),parameter:: v0 = sqrt(ekin*2.d0/d0)
@@ -188,7 +188,7 @@
 
       pi=acos(-1.0d0)
 
-      Ahl = 0.50d0
+      Ahl = 0.5d0
       Bhl = 0.5d0
       Chl = 0.5d0
 
@@ -212,12 +212,12 @@
 
           p(i,j,k) = p0
 
-         b1(i,j,k) = b0*(  Ahl*sin(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)) &
-   &                     + Chl*cos(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)))
-         b2(i,j,k) = b0*(  Bhl*sin(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)) &
-   &                     + Ahl*cos(k_ini*x3b(k)*2.0d0*pi/(x3max-x3min)))
-         b3(i,j,k) = b0*(  Chl*sin(k_ini*x2b(j)*2.0d0*pi/(x2max-x2min)) &
-   &                     + Bhl*cos(k_ini*x1b(i)*2.0d0*pi/(x1max-x1min)))
+         b1(i,j,k) = b0*(  Ahl*sin(2.0d0*pi*(k_ini*x3b(k)/(x3max-x3min))) &
+   &                     + Chl*cos(2.0d0*pi*(k_ini*x2b(j)/(x2max-x2min))))
+         b2(i,j,k) = b0*(  Bhl*sin(2.0d0*pi*(k_ini*x1b(i)/(x1max-x1min))) &
+   &                     + Ahl*cos(2.0d0*pi*(k_ini*x3b(k)/(x3max-x3min))))
+         b3(i,j,k) = b0*(  Chl*sin(2.0d0*pi*(k_ini*x2b(j)/(x2max-x2min))) &
+   &                     + Bhl*cos(2.0d0*pi*(k_ini*x1b(i)/(x1max-x1min))))
 
          call random_number(x)
          v1(i,j,k) = v1(i,j,k)*(1.0d0+eps*(x-0.5d0))
@@ -1849,12 +1849,10 @@
             ch2l = ( abs(svc(nve2,i,j,k)) + cms )
             dh2l = (x2a(j+1)-x2a(j)) 
 
-!         if (ldimen .eq. 3) then
-!            cms  = sqrt((cts +sqrt(cts**2
-!     &      -4.0d0*css*svc(nbm3,i,j,k)**2/svc(nden,i,j,k)))/2.0d0)
-!            ch3l = ( abs(svc(nve3,i,j,k)) + cms )
-!            dh3l = (x3a(k+1)-x3a(k))
-!         endif
+            cms  = sqrt((cts +sqrt(cts**2 &
+     &      -4.0d0*css*svc(nbm3,i,j,k)**2/svc(nden,i,j,k)))/2.0d0)
+            ch3l = ( abs(svc(nve3,i,j,k)) + cms )
+            dh3l = (x3a(k+1)-x3a(k))
 
          chl     = max(ch1l,ch2l,ch3l)
          dhl     = min(dh1l,dh2l,dh3l)
@@ -1890,9 +1888,7 @@
       do i=is,ie
             dh1l = x1a(i+1)-x1a(i)
             dh2l = x2a(j+1)-x2a(j)
-!         if(ldimen .eq. 3) then
-!            dh3l = dx3a(k)
-!         endif
+            dh3l = x3a(k+1)-x3a(k)
 
          dhl = min(dh1l,dh2l,dh3l)
          taui = alphabp * chg /dhl ! cm/s /cm => 1/s
