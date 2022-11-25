@@ -338,7 +338,7 @@ subroutine Fourier
   open(unitspc,file=filename,status='replace',form='formatted')
   write(unitspc,'(1a,1(1x,E12.3))') "#",time
 !                                               12345678   12345678   12345678   12345678   12345678
-  write(unitspc,'(1a,4(1x,a8))') "#","1:k    ","2:E_kin ","3:ens   ","4:mpot  ","5:cross ","6:E_mag "
+  write(unitspc,'(1a,6(1x,a8))') "#","1:k    ","2:E_kin ","3:ens   ","4:mpot  ","5:cross ","6:E_mag "
   do rk=1,nk
      write(unitspc,'(1x,6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) & ! kinetic energy
                                      &       ,Xhat1D(rk,2)/Xtot(2) & ! enstrophy
