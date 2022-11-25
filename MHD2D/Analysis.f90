@@ -157,7 +157,7 @@ subroutine Vorticity
   open(unitvor,file=filename,status='replace',form='formatted')
 
   write(unitvor,'(1a,4(1x,E12.3))') "#",time
-  write(unitvor,'(1a,4(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:jcd_z ","5:E_kin ","6:E_mag "
+  write(unitvor,'(1a,6(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:jcd_z ","5:E_kin ","6:E_mag "
   do j=js,je
   do i=is,ie
      write(unitvor,'(6(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k),kin(i,j,k),mag(i,j,k)
