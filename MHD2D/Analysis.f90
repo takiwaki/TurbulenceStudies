@@ -343,7 +343,7 @@ subroutine Fourier
      write(unitspc,'(1x,6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) & ! kinetic energy
                                      &       ,Xhat1D(rk,2)/Xtot(2) & ! enstrophy
                                      &       ,Xhat1D(rk,3)/Xtot(3) & ! magpot
-                                     &       ,Xhat1D(rk,4)/Xtot(4) & ! cross helicity
+                                     &       ,Xhat1D(rk,4)         & ! cross helicity
                                      &       ,Xhat1D(rk,5)/Xtot(5)   ! magnetic energy
 
   enddo

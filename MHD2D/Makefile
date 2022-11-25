@@ -43,12 +43,14 @@ else
     BIN= ${filename}
 endif
 
+# 2D cross section
 VOR   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
 VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
 JCDPNG= $(patsubst ${dira}/vor%.dat,${dirf}/jcd%.png,$(VOR))
 MAGPNG= $(patsubst ${dira}/vor%.dat,${dirf}/mag%.png,$(VOR))
 
+# spectrum
 SPC   = $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
 VSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/vsp%.png,$(SPC))
 KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
@@ -56,29 +58,61 @@ HCRPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hcr%.png,$(SPC))
 MPTPNG= $(patsubst ${dira}/spc%.dat,${dirf}/mpt%.png,$(SPC))
 MSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/msp%.png,$(SPC))
 
+# intgrated values 
+TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
+
 ##########################################
 # Movies
 ##########################################
 
+# 2D cross section
 vormovie=${dirm}/anivor.mp4
 kinmovie=${dirm}/anikin.mp4
-
 jcdmovie=${dirm}/anijcd.mp4
 magmovie=${dirm}/animag.mp4
 
+2Dmovies=${vormovie} ${kinmovie} ${jcdmovie} ${magmovie}
+
+# spectrum
 kspmovie=${dirm}/aniksp.mp4
 vspmovie=${dirm}/anivsp.mp4
 hcrmovie=${dirm}/anihcr.mp4
 mptmovie=${dirm}/animpt.mp4
 mspmovie=${dirm}/animsp.mp4
 
-moviefile=${vormovie} ${kinmovie} ${jcdmovie} ${magmovie} ${kspmovie} ${vspmovie} ${hcrmovie} ${mptmovie} ${mspmovie}
+specmovies= ${kspmovie} ${vspmovie} ${hcrmovie} ${mptmovie} ${mspmovie}
+
+moviefile=${2Dmovies} ${specmovies}
+
+##########################################
+# Final spectrum
+##########################################
 
 specfile=k-E_k.png
 
-all: ${exe} ${moviefile} ${specfile}
+##########################################
+# Time evolution
+##########################################
+
+timefile=t-E.png
+
+##########################################
+# Proceadures
+##########################################
+
+all: ${exe} ${moviefile} ${specfile} ${timefile}
 
 .PHONY: all clean allclean
+
+
+##########################################
+# Time evolution
+##########################################
+${timefile}: TimeEvolution.plt t-prof.dat
+	gnuplot TimeEvolution.plt
+
+t-prof.dat: MakeTimeseq.sh ${TOT}
+	./MakeTimeseq.sh
 
 #################
 # ffmpeg
@@ -117,14 +151,18 @@ ${mspmovie}: MakeMovie.sh ${MSPPNG}
 	./MakeMovie.sh msp
 
 
-#################
+########################
 # gnuplot
-#################
+########################
+
+########################
+# 2D cross section
+########################
 
 spectrum: ${specfile}
 
-${specfile}: spectrum.plt
-	gnuplot spectrum.plt
+${specfile}: spectrum-fin.plt
+	gnuplot spectrum-fin.plt
 
 2Dsnaps: ${VORPNG} ${JCDPNG} ${KINPNG} ${MAGPNG}
 
@@ -140,6 +178,11 @@ ${KINPNG}: vor.plt MakeSnap.sh ${VOR}
 ${MAGPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
 
+########################
+# spectrum
+########################
+
+2Dspecs: ${KSPPNG} ${VSPPNG} ${HCRPNG} ${MSPPNG} ${MPTPNG}
 
 ${KSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
 	./MakeSnap.sh spectrum.plt
@@ -155,7 +198,6 @@ ${MSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
 
 ${MPTPNG}: spectrum.plt MakeSnap.sh ${SPC}
 	./MakeSnap.sh spectrum.plt
-
 
 #################
 # analysis
