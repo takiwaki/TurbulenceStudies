@@ -174,20 +174,14 @@ subroutine Fourier
   Xtot(:)=0.0d0
   do j=js,je
   do i=is,ie
-     Xtot(1) = Xtot(1) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  & 
- &    *dx*dy
-
-     Xtot(2) =  Xtot(2) &
- &    + vor(i,j,k)**2                               & 
- &    *dx*dy
+     Xtot(1) = Xtot(1) + kin(i,j,k)    *dx*dy
+     Xtot(2) = Xtot(2) + vor(i,j,k)**2 *dx*dy
 
   enddo
   enddo
 
-  dkx = 1.0d0/(dx*in)
-  dky = 1.0d0/(dy*jn)
+  dkx = 1.0d0/(dx*(in-2*igs))
+  dky = 1.0d0/(dy*(jn-2*jgs))
   
   do ik=1,nk
      kx(ik) = ik *dkx
@@ -204,8 +198,7 @@ subroutine Fourier
 
   do j=js,je
   do i=is,ie
-     X(1) = 0.5d0*d(i,j,k)                          &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k)) 
+     X(1) = kin(i,j,k)
      X(2) = vor(i,j,k)**2
 
      Xhat2Dc(ik,jk,1:nvar) = Xhat2Dc(ik,jk,1:nvar)  &

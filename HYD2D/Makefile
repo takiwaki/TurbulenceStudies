@@ -43,14 +43,18 @@ else
     BIN= ${filename}
 endif
 
+# 2D cross section
 VOR   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
 VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
 KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
 
+# spectrum
 SPC   = $(patsubst ${dird}/unf%.dat,${dira}/spc%.dat,$(BIN))
 KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
 VSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/vsp%.png,$(SPC))
 
+# intgrated values 
+TOT   = $(patsubst ${dird}/unf%.dat,${dira}/tot%.dat,$(BIN))
 
 ##########################################
 # Movies
@@ -58,16 +62,44 @@ VSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/vsp%.png,$(SPC))
 
 kinmovie=${dirm}/anikin.mp4
 vormovie=${dirm}/anivor.mp4
+
+2Dmovies=${vormovie} ${kinmovie}
+
 kspmovie=${dirm}/aniksp.mp4
 vspmovie=${dirm}/anivsp.mp4
 
-moviefile=${vormovie} ${kinmovie} ${kspmovie} ${vspmovie}
+specmovies= ${kspmovie} ${vspmovie}
+
+
+moviefile=${2Dmovies} ${specmovies}
+##########################################
+# Final spectrum
+##########################################
 
 specfile=k-E_k.png
 
-all: ${exe} ${moviefile} ${specfile}
+##########################################
+# Time evolution
+##########################################
+
+timefile=t-E.png
+
+##########################################
+# Proceadures
+##########################################
+
+all: ${exe} ${moviefile} ${specfile} ${timefile}
 
 .PHONY: all clean allclean
+
+##########################################
+# Time evolution
+##########################################
+${timefile}: TimeEvolution.plt t-prof.dat
+	gnuplot TimeEvolution.plt
+
+t-prof.dat: MakeTimeseq.sh ${TOT}
+	./MakeTimeseq.sh
 
 #################
 # ffmpeg
@@ -91,10 +123,10 @@ ${vspmovie}: MakeMovie.sh ${VSPPNG}
 # gnuplot
 #################
 
-spectrum: ${specfile}
 
-${specfile}: spectrum.plt
-	gnuplot -e ifnum=580 spectrum.plt
+########################
+# 2D cross section
+########################
 
 2Dsnaps: ${VORPNG} ${KINPNG} 
 
@@ -103,6 +135,17 @@ ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 
 ${KINPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
+
+########################
+# spectrum
+########################
+
+spectrum: ${specfile}
+
+${specfile}: spectrum-fin.plt
+	gnuplot spectrum-fin.plt
+
+specs: ${KSPPNG} ${VSPPNG} 
 
 ${KSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
 	./MakeSnap.sh spectrum.plt
