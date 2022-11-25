@@ -159,10 +159,6 @@ ${mspmovie}: MakeMovie.sh ${MSPPNG}
 # 2D cross section
 ########################
 
-spectrum: ${specfile}
-
-${specfile}: spectrum-fin.plt
-	gnuplot spectrum-fin.plt
 
 2Dsnaps: ${VORPNG} ${JCDPNG} ${KINPNG} ${MAGPNG}
 
@@ -182,7 +178,12 @@ ${MAGPNG}: vor.plt MakeSnap.sh ${VOR}
 # spectrum
 ########################
 
-2Dspecs: ${KSPPNG} ${VSPPNG} ${HCRPNG} ${MSPPNG} ${MPTPNG}
+spectrum: ${specfile}
+
+${specfile}: spectrum-fin.plt
+	gnuplot spectrum-fin.plt
+
+specs: ${KSPPNG} ${VSPPNG} ${HCRPNG} ${MSPPNG} ${MPTPNG}
 
 ${KSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
 	./MakeSnap.sh spectrum.plt

@@ -913,8 +913,8 @@ end module eosmod
 !==============================
          leftco(mudn,i,j,k)=leftpr(nden,i,j,k)
          leftco(muvv,i,j,k)=leftpr(nve1,i,j,k)*leftpr(nden,i,j,k)
-         leftco(muvw,i,j,k)=leftpr(nve2,i,j,k)*leftpr(nden,i,j,k) ! rho v
-         leftco(muvu,i,j,k)=leftpr(nve3,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muvw,i,j,k)=leftpr(nve2,i,j,k)*leftpr(nden,i,j,k)
+         leftco(muvu,i,j,k)=leftpr(nve3,i,j,k)*leftpr(nden,i,j,k)   ! rho v
          leftco(muet,i,j,k)=leftpr(nene,i,j,k)*leftpr(nden,i,j,k) & ! thermal
      &               +0.5d0*leftpr(nden,i,j,k)*(                  & ! kinetic
      &                     +leftpr(nve1,i,j,k)**2                 &
@@ -1407,7 +1407,7 @@ end module eosmod
         vyl = leftst(muvv)/leftst(mudn)
         vzl = leftst(muvw)/leftst(mudn)
         byl = leftst(mubv)
-        bzl = leftst(mubv)
+        bzl = leftst(mubw)
         ptl = leftst(mpre)
 
 !---- Right state
@@ -1421,7 +1421,7 @@ end module eosmod
         vyr = rigtst(muvv)/rigtst(mudn)
         vzr = rigtst(muvw)/rigtst(mudn)
         byr = rigtst(mubv)
-        bzr = rigtst(mubv)
+        bzr = rigtst(mubw)
         ptr = rigtst(mpre)
 
 !----- Step 1. ----------------------------------------------------------|
