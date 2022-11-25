@@ -1496,7 +1496,7 @@
         vyl = leftst(muvv)/leftst(mudn)
         vzl = leftst(muvw)/leftst(mudn)
         byl = leftst(mubv)
-        bzl = leftst(mubv)
+        bzl = leftst(mubw)
         ptl = leftst(mpre)
 
 !---- Right state
@@ -1510,7 +1510,7 @@
         vyr = rigtst(muvv)/rigtst(mudn)
         vzr = rigtst(muvw)/rigtst(mudn)
         byr = rigtst(mubv)
-        bzr = rigtst(mubv)
+        bzr = rigtst(mubw)
         ptr = rigtst(mpre)
 
 !----- Step 1. ----------------------------------------------------------|
@@ -1687,20 +1687,20 @@
            temp1 = msrst-msr
 
            nflux(mden) = (frol+(rolst-rol)*msl)*maxs1   &
-     &           +(fror+(rorst-ror)*msr)*mins1
+     &                  +(fror+(rorst-ror)*msr)*mins1
            nflux(meto) = (feel+(eelst-eel)*msl+(eeldst-eelst)*mslst)*maxs1  & 
-     &           +(feer+(eerst-eer)*msr+(eerdst-eerst)*msrst)*mins1
+     &                  +(feer+(eerst-eer)*msr+(eerdst-eerst)*msrst)*mins1
            nflux(mrvu) = (frxl+(rxlst-rxl)*msl)*maxs1   &
-     &           +(frxr+(rxrst-rxr)*msr)*mins1
+     &                  +(frxr+(rxrst-rxr)*msr)*mins1
            nflux(mrvv) = (fryl+(rylst-ryl)*msl+(ryldst-rylst)*mslst)*maxs1  & 
-     &           +(fryr+(ryrst-ryr)*msr+(ryrdst-ryrst)*msrst)*mins1
+     &                  +(fryr+(ryrst-ryr)*msr+(ryrdst-ryrst)*msrst)*mins1
            nflux(mrvw) = (frzl+(rzlst-rzl)*msl+(rzldst-rzlst)*mslst)*maxs1  &
-     &           +(frzr+(rzrst-rzr)*msr+(rzrdst-rzrst)*msrst)*mins1
+     &                  +(frzr+(rzrst-rzr)*msr+(rzrdst-rzrst)*msrst)*mins1
            nflux(mbmu) = 0d0
            nflux(mbmv) = (fbyl+(bylst-byl)*msl+(byldst-bylst)*mslst)*maxs1  &
-     &           +(fbyr+(byrst-byr)*msr+(byrdst-byrst)*msrst)*mins1
+     &                  +(fbyr+(byrst-byr)*msr+(byrdst-byrst)*msrst)*mins1
            nflux(mbmw) = (fbzl+(bzlst-bzl)*msl+(bzldst-bzlst)*mslst)*maxs1  &
-     &           +(fbzr+(bzrst-bzr)*msr+(bzrdst-bzrst)*msrst)*mins1
+     &                  +(fbzr+(bzrst-bzr)*msr+(bzrdst-bzrst)*msrst)*mins1
 
       return
       end subroutine HLLD
