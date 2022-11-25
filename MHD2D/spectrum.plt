@@ -20,9 +20,9 @@ set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
 
-
+if (exist("ifnum")==0 ) ifnum=100
 input= sprintf("output/spc%05d.dat",ifnum)
-
+print input
 ##########################################
 # Evolusiton of shock and Gain Radius
 ##########################################
@@ -121,3 +121,4 @@ plot NaN notitle \
 
 reset
 set term pop
+
