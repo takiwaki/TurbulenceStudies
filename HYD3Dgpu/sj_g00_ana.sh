@@ -8,4 +8,4 @@
 # squeue
 
 module load nvhpc
-./Analysis.x > log.dat
+./Analysis.x > logana.dat
