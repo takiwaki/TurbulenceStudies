@@ -15,40 +15,23 @@ set style line 7 lt 1 lw 6 lc rgb "#ff9900" # universal design orange
 set style line 8 lt 1 lw 6 lc rgb "#9a0079" # universal design purple
 set style line 9 lt 1 lw 6 lc rgb "#663300" # universal design brown
  
-set style line 91 lt 1 lw 6 lc rgb "black" # 
+set style line 91 lt 1 lw 2 lc rgb "black" # 
 set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
-ifnum=500
-input= sprintf("output/spc%05d.dat",ifnum)
 
-##########################################
-# Evolusiton of shock and Gain Radius
-##########################################
+input= "t-prof.dat"
 
-if(pngflag==1)set output "k-E_k.png"
-set log 
+outputfile= "t-E.png"
+if(pngflag==1)set output outputfile
 
-set xlabel "Wave number"
-set xrange [1:100]
-
-set ylabel "E_k"
-set yrange [*:*]
-
-set key right top
+set xlabel "Time"
+set log x
 
 plot NaN notitle \
-, input  u 1:2  notitle w l ls 1  \
-, 6*x**(-5.0/3.0) title "-5/3" w l ls 2
-
-
-if(pngflag==1)set output "k-V_k.png"
-set log 
-
-set ylabel "Enstrophy"
-
-plot NaN notitle \
-, input  u 1:3  notitle w l ls 1  \
+, input  u 1:2  title "Kinetic energy" w l ls 1  \
+, input  u 1:5  title "Cross helicity" w l ls 3  \
+, input  u 1:4  title "Magnetic potential" w l ls 2  \
 
 reset
 set term pop

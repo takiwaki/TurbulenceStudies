@@ -1757,12 +1757,10 @@ end module eosmod
             ch2l = ( abs(svc(nve2,i,j,k)) + cms )
             dh2l = (x2a(j+1)-x2a(j)) 
 
-!         if (ldimen .eq. 3) then
-!            cms  = sqrt((cts +sqrt(cts**2
-!     &      -4.0d0*css*svc(nbm3,i,j,k)**2/svc(nden,i,j,k)))/2.0d0)
-!            ch3l = ( abs(svc(nve3,i,j,k)) + cms )
-!            dh3l = (x3a(k+1)-x3a(k))
-!         endif
+            cms  = sqrt((cts +sqrt(cts**2 &
+     &      -4.0d0*css*svc(nbm3,i,j,k)**2/svc(nden,i,j,k)))/2.0d0)
+            ch3l = ( abs(svc(nve3,i,j,k)) + cms )
+            dh3l = (x3a(k+1)-x3a(k))
 
          chl     = max(ch1l,ch2l,ch3l)
          dhl     = min(dh1l,dh2l,dh3l)
@@ -1796,9 +1794,7 @@ end module eosmod
       do i=is,ie
             dh1l = x1a(i+1)-x1a(i)
             dh2l = x2a(j+1)-x2a(j)
-!         if(ldimen .eq. 3) then
-!            dh3l = dx3a(k)
-!         endif
+            dh3l = x3a(k+1)-x3a(k)
 
          dhl = min(dh1l,dh2l,dh3l)
          taui = alphabp * chg /dhl ! cm/s /cm => 1/s

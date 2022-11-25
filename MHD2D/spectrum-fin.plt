@@ -19,14 +19,15 @@ set style line 91 lt 1 lw 2 lc rgb "black" #
 set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
-if (exist("ifnum")==0 ) ifnum=100
+if (exist("ifnum")==0 ) ifnum=580
 input= sprintf("output/spc%05d.dat",ifnum)
-print input
+
 ##########################################
 # Kinetic energy
 ##########################################
 
-outputfile= sprintf("figures/ksp%05d.png",ifnum)
+outputfile="k-E_k.png"
+#outputfile= sprintf("figures/ksp%05d.png",ifnum)
 if(pngflag==1)set output outputfile
 
 set log 
@@ -42,13 +43,14 @@ set key right top
 
 plot NaN notitle \
 , input  u 1:2  notitle w l ls 1  \
-#, (0.1)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+#, (0.2)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
 ##########################################
 # Enstrophy
 ##########################################
 
-outputfile= sprintf("figures/vsp%05d.png",ifnum)
+outputfile="k-V_k.png"
+#outputfile= sprintf("figures/vsp%05d.png",ifnum)
 if(pngflag==1)set output outputfile
 set log 
 set format y "10^{%L}"
@@ -57,8 +59,67 @@ set ylabel "Enstrophy"
 
 plot NaN notitle \
 , input  u 1:3  notitle w l ls 1  \
-#, (2e3)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+
+##########
+# 
+##########
+outputfile="k-M_k.png"
+#outputfile= sprintf("figures/mpt%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
+set log 
+
+set ylabel "Magnetic potential"
+
+set log 
+set format y "10^{%L}"
+
+plot NaN notitle \
+, input  u 1:4  notitle "2D MHD" w l ls 1  \
+#, 5.0e-7*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
+
+
+
+##########
+# 
+##########
+outputfile="k-C_k.png"
+#outputfile= sprintf("figures/mpt%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
+set log 
+
+set ylabel "Magnetic potential"
+
+set log 
+set format y "10^{%L}"
+
+plot NaN notitle \
+, input  u 1:5  notitle "2D MHD" w l ls 1  \
+#, 5.0e-7*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
+
+
+##########################################
+# ALL
+##########################################
+
+outputfile="k-E_kC_kM_k.png"
+if(pngflag==1)set output outputfile
+#set ylabel "Kinetic energy, Cross helicity, Magnetic potential [a.u.]"
+
+unset ylabel
+
+set log 
+set format y "10^{%L}"
+
+
+plot NaN notitle \
+, input  u 1:2  title "Kinetic energy" w l ls 1  \
+, input  u 1:5  title "Cross helicity" w l ls 3  \
+, input  u 1:4  title "Magnetic potential" w l ls 2  \
+#, (1.0)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
 reset
 set term pop
+
 

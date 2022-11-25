@@ -20,34 +20,42 @@ set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
 
-ifnum=1
-inputinit= sprintf("output/spc%05d.dat",ifnum)
 
-ifnum=580
 input= sprintf("output/spc%05d.dat",ifnum)
 
 ##########################################
 # Evolusiton of shock and Gain Radius
 ##########################################
 
-if(pngflag==1)set output "k-E_k.png"
 set log 
 set format y "10^{%L}"
 
 set xlabel "Wave number"
 set xrange [1:100]
 
-set ylabel "E_k"
+####################
+# kinetic energy
+####################
+outputfile= sprintf("figures/ksp%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
+set ylabel "Kinetic energy"
 set yrange [*:*]
 
 set key right top
 
 plot NaN notitle \
 , input  u 1:2  notitle w l ls 1  \
-, 6*x**(-3.0/2.0) title "-3/2" w l ls 91
+#, 6*x**(-3.0/2.0) title "-3/2" w l ls 91
 
 
-if(pngflag==1)set output "k-V_k.png"
+####################
+# Kinetic helicity
+####################
+
+outputfile= sprintf("figures/hks%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
 set log 
 set format y "10^{%L}"
 
@@ -55,21 +63,32 @@ set ylabel "Enstrophy"
 
 plot NaN notitle \
 , input  u 1:3  notitle w l ls 1  \
-, 0.3*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+#, 0.3*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
-if(pngflag==1)set output "k-A_k.png"
+##########
+# 
+##########
+outputfile= sprintf("figures/hmm%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
 set log 
 
-set ylabel "Magnetic potential"
+set ylabel "Magnetic helicity mimic"
 
 set log 
 set format y "10^{%L}"
 
 plot NaN notitle \
 , input  u 1:4  title "2D MHD" w l ls 1  \
-, 5.0e-7*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
+#, 5.0e-7*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
 
-if(pngflag==1)set output "k-C_k.png"
+
+##########
+# 
+##########
+outputfile= sprintf("figures/hcr%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
 set log 
 
 set ylabel "Cross helicity"
@@ -79,7 +98,25 @@ set format y "10^{%L}"
 
 plot NaN notitle \
 , input  u 1:5  title "2D MHD" w l ls 1  \
-, 1.0e-3*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
+#, 1.0e-3*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
+
+##########
+# 
+##########
+
+outputfile= sprintf("figures/msp%05d.png",ifnum)
+if(pngflag==1)set output outputfile
+
+set log 
+
+set ylabel "Magnetic energy"
+
+set log 
+set format y "10^{%L}"
+
+plot NaN notitle \
+, input  u 1:6  title "2D MHD" w l ls 1  \
+#, 1.0e-3*(x/10)**(-3.0/2.0) title "-3/2" w l ls 91
 
 
 reset

@@ -10,8 +10,8 @@ module fieldmod
     real(8),dimension(:),allocatable:: x1a,x2a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
     real(8),dimension(:,:,:),allocatable:: b1,b2,b3,bp
-    real(8),dimension(:,:,:),allocatable:: vor ! vorticity
-    real(8),dimension(:,:,:),allocatable:: jcd ! current density
+    real(8),dimension(:,:,:),allocatable:: vor, kin ! vorticity
+    real(8),dimension(:,:,:),allocatable:: jcd, mag ! current density
     real(8),dimension(:,:,:),allocatable:: mpt ! magnetic potential
     real(8),dimension(:,:,:),allocatable:: hcr ! cross helicity
     real(8):: dx,dy
@@ -125,6 +125,8 @@ subroutine Vorticity
   if(.not. is_inited)then
      allocate( vor(in,jn,kn))
      allocate( jcd(in,jn,kn))
+     allocate( kin(in,jn,kn))
+     allocate( mag(in,jn,kn))
      is_inited = .true.
   endif
 
@@ -139,6 +141,14 @@ subroutine Vorticity
                &+(b2(i+1,j,k)-b2(i  ,j,k))/dx*0.5 &
                &-(b1(i,j  ,k)-b1(i,j-1,k))/dy*0.5 &
                &-(b1(i,j+1,k)-b1(i,j  ,k))/dy*0.5 
+     kin(i,j,k)= 0.5d0*d(i,j,k)*( &
+               & +v1(i,j,k)*v1(i,j,k) &
+               & +v2(i,j,k)*v2(i,j,k) &
+               & )
+     mag(i,j,k)= ( &
+               & +b1(i,j,k)*b1(i,j,k) &
+               & +b2(i,j,k)*b2(i,j,k) &
+               & )
   enddo
   enddo
 
@@ -146,11 +156,11 @@ subroutine Vorticity
   filename = trim(dirname)//filename
   open(unitvor,file=filename,status='replace',form='formatted')
 
-  write(unitvor,*) "# ",time
-  write(unitvor,*) "# x y omega_z"
+  write(unitvor,'(1a,4(1x,E12.3))') "#",time
+  write(unitvor,'(1a,6(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:jcd_z ","5:E_kin ","6:E_mag "
   do j=js,je
   do i=is,ie
-     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k)
+     write(unitvor,'(6(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k),kin(i,j,k),mag(i,j,k)
   enddo
      write(unitvor,*)
   enddo
@@ -238,7 +248,7 @@ subroutine Fourier
   integer::i,j,k
   integer::ik,jk,kk,rk
   integer,parameter:: nk=128
-  integer,parameter:: nvar=4
+  integer,parameter:: nvar=5
   real(8),dimension(nvar):: X
   real(8),dimension(nvar):: Xtot
   real(8),dimension(nk,nk,nvar):: Xhat2Dc,Xhat2Ds
@@ -259,23 +269,11 @@ subroutine Fourier
   Xtot(:)=0.0d0
   do j=js,je
   do i=is,ie
-     Xtot(1) = Xtot(1) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  & 
- &    *dx*dy
-
-     Xtot(2) =  Xtot(2) &
- &    + vor(i,j,k)**2                               & 
- &    *dx*dy
-
-     Xtot(3) = Xtot(3) &
- &    + mpt(i,j,k)**2                               & 
- &    *dx*dy
-
-     Xtot(4) = Xtot(4) &
- &    + Hcr(i,j,k)                                  & 
- &    *dx*dy
-
+     Xtot(1) = Xtot(1) + kin(i,j,k)    *dx*dy
+     Xtot(2) = Xtot(2) + vor(i,j,k)**2 *dx*dy
+     Xtot(3) = Xtot(3) + mpt(i,j,k)**2 *dx*dy
+     Xtot(4) = Xtot(4) + Hcr(i,j,k)    *dx*dy
+     Xtot(5) = Xtot(5) + mag(i,j,k)    *dx*dy
   enddo
   enddo
 
@@ -304,11 +302,11 @@ subroutine Fourier
 
   do j=js,je
   do i=is,ie
-     X(1) = 0.5d0*d(i,j,k)                          &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k)) 
+     X(1) = kin(i,j,k) 
      X(2) = vor(i,j,k)**2
      X(3) = mpt(i,j,k)**2
      X(4) = hcr(i,j,k)
+     X(5) = mag(i,j,k)
 
      Xhat2Dc(ik,jk,1:nvar) = Xhat2Dc(ik,jk,1:nvar)  &
  &    + X(1:nvar)                                   &
@@ -338,21 +336,23 @@ subroutine Fourier
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
   open(unitspc,file=filename,status='replace',form='formatted')
-  write(unitspc,*) "# ",time
+  write(unitspc,'(1a,1(1x,E12.3))') "#",time
+!                                               12345678   12345678   12345678   12345678   12345678
+  write(unitspc,'(1a,4(1x,a8))') "#","1:k    ","2:E_kin ","3:ens   ","4:mpot  ","5:cross ","6:E_mag "
   do rk=1,nk
-     write(unitspc,'(6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) &
-                                  &       ,Xhat1D(rk,2)/Xtot(1) &
-                                  &       ,Xhat1D(rk,3)/Xtot(1) &
-                                  &       ,Xhat1D(rk,4)/Xtot(1)
+     write(unitspc,'(1x,6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) & ! kinetic energy
+                                     &       ,Xhat1D(rk,2)/Xtot(2) & ! enstrophy
+                                     &       ,Xhat1D(rk,3)/Xtot(3) & ! magpot
+                                     &       ,Xhat1D(rk,4)         & ! cross helicity
+                                     &       ,Xhat1D(rk,5)/Xtot(5)   ! magnetic energy
+
   enddo
   close(unitspc)
 
   write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
   filename = trim(dirname)//filename
   open(unittot,file=filename,status='replace',form='formatted')
-  do rk=1,nk
-     write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4)
-  enddo
+  write(unittot,'(1x,6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4),Xtot(5)
   close(unittot)
 
   return
