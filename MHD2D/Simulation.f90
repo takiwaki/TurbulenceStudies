@@ -1173,7 +1173,7 @@ end module eosmod
         vyl = leftst(muvv)/leftst(mudn)
         vzl = leftst(muvw)/leftst(mudn)
         byl = leftst(mubv)
-        bzl = leftst(mubv)
+        bzl = leftst(mubw)
         ptl = leftst(mpre)
 
 !---- Right state
@@ -1187,7 +1187,7 @@ end module eosmod
         vyr = rigtst(muvv)/rigtst(mudn)
         vzr = rigtst(muvw)/rigtst(mudn)
         byr = rigtst(mubv)
-        bzr = rigtst(mubv)
+        bzr = rigtst(mubw)
         ptr = rigtst(mpre)
 
 !----- Step 1. ----------------------------------------------------------|
