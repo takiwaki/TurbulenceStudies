@@ -6,16 +6,37 @@ module fieldmod
     integer:: izone,jzone,kzone
     integer:: igs,jgs,kgs
     integer:: is,js,ks,ie,je,ke
-    real(8),dimension(:),allocatable:: x1b,x2b
-    real(8),dimension(:),allocatable:: x1a,x2a
+    real(8),dimension(:),allocatable:: x1b,x2b,x3b
+    real(8),dimension(:),allocatable:: x1a,x2a,x3a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
     real(8),dimension(:,:,:),allocatable:: b1,b2,b3,bp
-    real(8),dimension(:,:,:),allocatable:: vor ! vorticity
-    real(8),dimension(:,:,:),allocatable:: jcd ! current density
-    real(8),dimension(:,:,:),allocatable:: mpt ! magnetic potential
-    real(8),dimension(:,:,:),allocatable:: hcr ! cross helicity
-    real(8):: dx,dy
-    real(8):: Etot,Vtot,Mtot,Ctot
+    real(8),dimension(:,:,:),allocatable:: vor1,vor2,vor3
+    real(8),dimension(:,:,:),allocatable:: jcd1,jcd2,jcd3
+    real(8),dimension(:,:,:),allocatable:: kin,hk
+    real(8),dimension(:,:,:),allocatable:: mag,hmm,hcr
+    real(8):: dx,dy,dz
+    
+!$acc declare create(incr)
+!$acc declare create(time,dt)
+!$acc declare create(in,jn,kn)
+!$acc declare create(izone,jzone,kzone)
+!$acc declare create(igs,jgs,kgs)
+!$acc declare create(is,js,ks)
+!$acc declare create(ie,je,ke)
+      
+!$acc declare create(x1a,x1b)
+!$acc declare create(x2a,x2b)
+!$acc declare create(x3a,x3b)
+      
+!$acc declare create(d,v1,v2,v3,p)
+!$acc declare create(b1,b2,b3,bp)
+!$acc declare create(vor1,vor2,vor3)
+!$acc declare create(jcd1,jcd2,jcd3)
+!$acc declare create(kin,hk)
+!$acc declare create(mag,hmm,hcr)
+
+!$acc declare create(dx,dy,dz)
+
 end module fieldmod
 
 program data_analysis
@@ -37,10 +58,7 @@ program data_analysis
      write(6,*) "file number",incr
      call ReadData
      call Vorticity
-     call Potential
-     call CrossHelicity
      call Fourier
-     call Probability
   enddo FILENUMBER
 
   stop
@@ -63,19 +81,24 @@ subroutine ReadData
   read(unitinp,*) dummy,time,dt
   read(unitinp,*) dummy,izone,igs
   read(unitinp,*) dummy,jzone,jgs
+  read(unitinp,*) dummy,kzone,kgs
   close(unitinp)
   in=izone+2*igs
   jn=jzone+2*jgs
-  kn=1
+  kn=kzone+2*kgs
 
   is=1+igs
   js=1+jgs
+  ks=1+kgs
+
   ie=in-igs
   je=jn-jgs
+  ke=kn-kgs
 
   if(.not. is_inited)then
      allocate( x1b(in),x1a(in))
      allocate( x2b(jn),x2a(jn))
+     allocate( x3b(kn),x3a(kn))
      allocate( d(in,jn,kn))
      allocate(v1(in,jn,kn))
      allocate(v2(in,jn,kn))
@@ -93,6 +116,7 @@ subroutine ReadData
   open(unitbin,file=filename,status='old',form='binary')
   read(unitbin)x1b(:),x1a(:)
   read(unitbin)x2b(:),x2a(:)
+  read(unitbin)x3b(:),x3a(:)
   read(unitbin)  d(:,:,:)
   read(unitbin) v1(:,:,:)
   read(unitbin) v2(:,:,:)
@@ -106,6 +130,14 @@ subroutine ReadData
   
   dx = x1b(2)-x1b(1)
   dy = x2b(2)-x2b(1)
+  dz = x3b(2)-x3b(1)
+
+!$acc update device (x1a,x1b)
+!$acc update device (x2a,x2b)
+!$acc update device (x3a,x3b)
+!$acc update device (d,v1,v2,v3,p)
+!$acc update device (b1,b2,b3,bp)
+!$acc update device (dx,dy,dz)
 
   return
 end subroutine ReadData
@@ -123,163 +155,146 @@ subroutine Vorticity
   data is_inited / .false. /
 
   if(.not. is_inited)then
-     allocate( vor(in,jn,kn))
-     allocate( jcd(in,jn,kn))
+     allocate( vor1(in,jn,kn))
+     allocate( vor2(in,jn,kn))
+     allocate( vor3(in,jn,kn))
+     allocate( jcd1(in,jn,kn))
+     allocate( jcd2(in,jn,kn))
+     allocate( jcd3(in,jn,kn))
+     allocate(  kin(in,jn,kn))
+     allocate(   hk(in,jn,kn))
+     allocate(  mag(in,jn,kn))
+     allocate(  hmm(in,jn,kn))
+     allocate(  hcr(in,jn,kn))
+!$acc update device (vor1,vor2,vor3)
+!$acc update device (jcd1,jcd2,jcd3)
+!$acc update device (kin,hk)
+!$acc update device (mag,hmm,hcr)
      is_inited = .true.
   endif
 
-  k=1
+!$acc kernels
+!$acc loop collapse(3) independent
+  do k=ks,ke
   do j=js,je
   do i=is,ie
-     vor(i,j,k)= (v2(i  ,j,k)-v2(i-1,j,k))/dx*0.5 &
-               &+(v2(i+1,j,k)-v2(i  ,j,k))/dx*0.5 &
-               &-(v1(i,j  ,k)-v1(i,j-1,k))/dy*0.5 &
-               &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5
-     jcd(i,j,k)= (b2(i  ,j,k)-b2(i-1,j,k))/dx*0.5 &
-               &+(b2(i+1,j,k)-b2(i  ,j,k))/dx*0.5 &
-               &-(b1(i,j  ,k)-b1(i,j-1,k))/dy*0.5 &
-               &-(b1(i,j+1,k)-b1(i,j  ,k))/dy*0.5 
+     vor1(i,j,k)= (v3(i,j  ,k)-v3(i,j-1,k))/dy*0.5 &
+                &+(v3(i,j+1,k)-v3(i,j  ,k))/dy*0.5 &
+                &-(v2(i,j,k  )-v2(i,j,k-1))/dz*0.5 &
+                &-(v2(i,j,k+1)-v2(i,j,k  ))/dz*0.5 
+     vor2(i,j,k)= (v1(i,j,k  )-v1(i,j,k-1))/dz*0.5 &
+                &+(v1(i,j,k+1)-v1(i,j,k  ))/dz*0.5 &
+                &-(v3(i  ,j,k)-v3(i-1,j,k))/dx*0.5 &
+                &-(v3(i+1,j,k)-v3(i  ,j,k))/dx*0.5 
+     vor3(i,j,k)= (v2(i  ,j,k)-v2(i-1,j,k))/dx*0.5 &
+                &+(v2(i+1,j,k)-v2(i  ,j,k))/dx*0.5 &
+                &-(v1(i,j  ,k)-v1(i,j-1,k))/dy*0.5 &
+                &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5
+
+      kin(i,j,k)= 0.5d0*d(i,j,k)*( v1(i,j,k)*v1(i,j,k) &
+                &                 +v2(i,j,k)*v2(i,j,k) &
+                &                 +v3(i,j,k)*v3(i,j,k))
+
+       hk(i,j,k)=  v1(i,j,k)*vor1(i,j,k) &
+                & +v2(i,j,k)*vor2(i,j,k) &
+                & +v3(i,j,k)*vor3(i,j,k)
+
+     jcd1(i,j,k)= (b3(i,j  ,k)-b3(i,j-1,k))/dy*0.5 &
+                &+(b3(i,j+1,k)-b3(i,j  ,k))/dy*0.5 &
+                &-(b2(i,j,k  )-b2(i,j,k-1))/dz*0.5 &
+                &-(b2(i,j,k+1)-b2(i,j,k  ))/dz*0.5 
+     jcd2(i,j,k)= (b1(i,j,k  )-b1(i,j,k-1))/dz*0.5 &
+                &+(b1(i,j,k+1)-b1(i,j,k  ))/dz*0.5 &
+                &-(b3(i  ,j,k)-b3(i-1,j,k))/dx*0.5 &
+                &-(b3(i+1,j,k)-b3(i  ,j,k))/dx*0.5 
+     jcd3(i,j,k)= (b2(i  ,j,k)-b2(i-1,j,k))/dx*0.5 &
+                &+(b2(i+1,j,k)-b2(i  ,j,k))/dx*0.5 &
+                &-(b1(i,j  ,k)-b1(i,j-1,k))/dy*0.5 &
+                &-(b1(i,j+1,k)-b1(i,j  ,k))/dy*0.5
+
+      mag(i,j,k)= 0.5d0*( b1(i,j,k)*b1(i,j,k) &
+                &        +b2(i,j,k)*b2(i,j,k) &
+                &        +b3(i,j,k)*b3(i,j,k))
+
+       hmm(i,j,k)=  b1(i,j,k)*jcd1(i,j,k) &
+                 & +b2(i,j,k)*jcd2(i,j,k) &
+                 & +b3(i,j,k)*jcd3(i,j,k)
+      hcr(i,j,k)=    ( b1(i,j,k)*v1(i,j,k) &
+                &     +b2(i,j,k)*v2(i,j,k) &
+                &     +b3(i,j,k)*v3(i,j,k))
+
   enddo
   enddo
-
-  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitvor,file=filename,status='replace',form='formatted')
-
-  write(unitvor,*) "# ",time
-  write(unitvor,*) "# x y omega_z"
-  do j=js,je
-  do i=is,ie
-     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k)
   enddo
-     write(unitvor,*)
-  enddo
-
-  close(unitvor)
-
+!$acc end kernels
 
   return
 end subroutine Vorticity
 
-subroutine Potential
-  use fieldmod
-  implicit none
-  integer::i,j,k
-
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitvor=231
-
-  logical,save:: is_inited
-  data is_inited / .false. /
-
-
-  if(.not. is_inited)then
-     allocate( mpt(in,jn,kn))
-     is_inited = .true.
-  endif
- 
-
-  mpt(:,:,:)= 0.0d0
-
-  k=1
-  do j=js,je
-  do i=is+1,ie
-     mpt(i,j,k) = mpt(i-1,j,k)  + (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
-  enddo
-  enddo
-
-  do j=js+1,je
-  do i=is  ,ie
-     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
-  enddo
-  enddo
-
-  return
-end subroutine Potential
-
-subroutine CrossHelicity
-  use fieldmod
-  implicit none
-  integer::i,j,k
-
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitvor=231
-
-  logical,save:: is_inited
-  data is_inited / .false. /
-
-
-  if(.not. is_inited)then
-     allocate( Hcr(in,jn,kn))
-     is_inited = .true.
-  endif
- 
-
-  Hcr(:,:,:)= 0.0d0
-
-  k=1
-  do j=js,je
-  do i=is,ie
-     Hcr(i,j,k) =     v1(i,j,k) * b1(i,j,k) &
-                &  +  v2(i,j,k) * b2(i,j,k) &
-                &  +  v3(i,j,k) * b3(i,j,k)
-  enddo
-  enddo
-
-  return
-end subroutine CrossHelicity
-
-
 subroutine Fourier
   use fieldmod
   implicit none
-  integer::i,j,k
+  integer::i,j,k,n
   integer::ik,jk,kk,rk
   integer,parameter:: nk=100
-  integer,parameter:: nvar=4
+  integer,parameter:: nvar=5
   real(8),dimension(nvar):: X
-  real(8),dimension(nk,nk,nvar):: Xhat2Dc,Xhat2Ds
-  real(8),dimension(nk):: kx,ky
+  real(8)                :: Xtotloc
+  real(8),dimension(nvar):: Xtot
+  real(8),dimension(nvar,nk,nk,nk):: Xhat3DC,Xhat3DS
+  real(8)                :: Xhat3DCloc,Xhat3DSloc
+  real(8),dimension(nk):: kx,ky,kz
   real(8),dimension(nk,nvar):: Xhat1D
   real(8):: kr
-  real(8):: dkx,dky,dkr
+  real(8):: dkx,dky,dkz,dkr
   character(20),parameter::dirname="output/"
   character(40)::filename
   integer,parameter::unitspc=21
+  integer,parameter::unittot=22
   real(8):: pi
+!$acc declare create(Xtot)
+!$acc declare create(dkx,dky,dkz)
+!$acc declare create(kx,ky,kz)
+!$acc declare create(Xhat3DC,Xhat3DS,Xhat1D)
+!$acc declare create(pi)
 
   pi=acos(-1.0d0)
+!$acc update device (pi)
 
-  k=1
-  
-  Etot=0.0d0
-  Vtot=0.0d0
+!$acc kernels
+!$acc loop independent
+  do n=1,nvar
+     Xtot(n)=0.0d0
+     Xtotloc = 0.0d0
+!$acc loop collapse(3) reduction(+:Xtotloc) private(X)
+  do k=ks,ke
   do j=js,je
   do i=is,ie
-     Etot = Etot &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  & 
- &    *dx*dy
-
-     Vtot = Vtot &
- &    + vor(i,j,k)**2                               & 
- &    *dx*dy
-
-     Mtot = Mtot &
- &    + mpt(i,j,k)**2                               & 
- &    *dx*dy
-
-     Ctot = Ctot &
- &    + Hcr(i,j,k)                                  & 
- &    *dx*dy
-
+     select case(n)
+     case(1)
+        X(n) = kin(i,j,k) ! kinetic energy
+     case(2)
+        X(n) =  hk(i,j,k) ! kinetic helicity
+     case(3)
+        X(n) = hmm(i,j,k) ! magnetic helicity mimic
+     case(4)
+        X(n) = Hcr(i,j,k) ! cross helicity
+     case(5)
+        X(n) = mag(i,j,k) ! magnetic energy
+     end select
+     Xtotloc = Xtotloc +X(n)*dx*dy*dz 
   enddo
   enddo
+  enddo
+  Xtot(n)=Xtotloc
+  enddo
+!$acc end kernels
 
-  dkx = 1.0d0/(dx*in)
-  dky = 1.0d0/(dy*jn)
+  dkx = 1.0d0/(dx*(in-2*igs))
+  dky = 1.0d0/(dy*(jn-2*jgs))
+  dkz = 1.0d0/(dz*(kn-2*kgs))
+ 
+!$acc update device (dkx,dky,dkz)
   
   do ik=1,nk
      kx(ik) = ik *dkx
@@ -287,43 +302,98 @@ subroutine Fourier
   do jk=1,nk
      ky(jk) = jk *dky
   enddo
+  do kk=1,nk
+     ky(kk) = kk *dkz
+  enddo
+!$acc update device (kx,ky,kz)
 
-  Xhat2Dc(:,:,:) = 0.0d0
-  Xhat2Ds(:,:,:) = 0.0d0
-
-  do ik=1,nk
+!$acc kernels
+!$acc loop collapse(4) independent private(Xhat3DCloc)
+  do n=1,nvar  
+  do kk=1,nk
   do jk=1,nk
-
+  do ik=1,nk     
+     Xhat3DCloc = 0.0d0
+!$acc loop collapse(3) reduction(+:Xhat3DCloc) private(X)
+  do k=ks,ke
   do j=js,je
   do i=is,ie
-     X(1) = 0.5d0*d(i,j,k)                          &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k)) 
-     X(2) = vor(i,j,k)**2
-     X(3) = mpt(i,j,k)**2
-     X(4) = hcr(i,j,k)
-
-     Xhat2Dc(ik,jk,1:nvar) = Xhat2Dc(ik,jk,1:nvar)  &
- &    + X(1:nvar)                                   &
- &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
-     Xhat2Ds(ik,jk,1:nvar) = Xhat2Ds(ik,jk,1:nvar)  &
- &    + X(1:nvar)                                   &
- &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
+     select case(n)
+     case(1)
+        X(n) = kin(i,j,k) ! kinetic energy
+     case(2)
+        X(n) =  hk(i,j,k) ! kinetic helicity
+     case(3)
+        X(n) = hmm(i,j,k) ! magnetic helicity mimic
+     case(4)
+        X(n) = Hcr(i,j,k) ! cross helicity
+     case(5)
+        X(n) = mag(i,j,k) ! magnetic energy
+     end select
+     Xhat3DCloc = Xhat3DCloc &
+ &    + X(n) &
+ &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j)+kz(kk)*x3b(k) )) & 
+ &    *dx*dy*dz
 
   enddo
   enddo
-
+  enddo
+     Xhat3DC(n,ik,jk,kk) = Xhat3DCloc
   enddo
   enddo
+  enddo
+  enddo
+!$acc end kernels
 
-  Xhat1D(:,1:nvar) = 0.0d0
-  dkr = dkx/sqrt(2.0d0) ! minimum k
-  do ik=1,nk
+!$acc kernels
+!$acc loop collapse(4) independent private(Xhat3DSloc)
+  do n=1,nvar  
+  do kk=1,nk
   do jk=1,nk
-     kr = sqrt(kx(ik)**2+ky(jk)**2)
+  do ik=1,nk     
+     Xhat3DSloc = 0.0d0
+!$acc loop collapse(3) reduction(+:Xhat3DSloc) private(X)
+  do k=ks,ke
+  do j=js,je
+  do i=is,ie
+     select case(n)
+     case(1)
+        X(n) = kin(i,j,k) ! kinetic energy
+     case(2)
+        X(n) =  hk(i,j,k) ! kinetic helicity
+     case(3)
+        X(n) = hmm(i,j,k) ! magnetic helicity mimic
+     case(4)
+        X(n) = Hcr(i,j,k) ! cross helicity
+     case(5)
+        X(n) = mag(i,j,k) ! magnetic energy
+     end select
+     Xhat3DSloc = Xhat3DSloc &
+ &    + X(n) &
+ &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j)+kz(kk)*x3b(k) )) & 
+ &    *dx*dy*dz
+
+  enddo
+  enddo
+  enddo
+     Xhat3DS(n,ik,jk,kk) = Xhat3DSloc 
+  enddo
+  enddo
+  enddo
+  enddo
+!$acc end kernels
+!$acc update host (Xhat3DC,Xhat3DS)
+
+  Xhat1D(:,:) = 0.0d0
+  dkr = dkx/sqrt(3.0d0) ! minimum k
+  do kk=1,nk
+  do jk=1,nk
+  do ik=1,nk
+     kr = sqrt(kx(ik)**2 +ky(jk)**2 +kz(kk)**2)
      rk = min(nk,int(kr/dkr))
-     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat2Dc(ik,jk,1:nvar)**2 + Xhat2Ds(ik,jk,1:nvar)**2)*dkx*dky 
+     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat3DS(1:nvar,ik,jk,kk)**2 & 
+ &                         +                      Xhat3DC(1:nvar,ik,jk,kk)**2)*dkx*dky*dkz
+  enddo
   enddo
   enddo
 
@@ -332,56 +402,20 @@ subroutine Fourier
   open(unitspc,file=filename,status='replace',form='formatted')
   write(unitspc,*) "# ",time
   do rk=1,nk
-     write(unitspc,'(6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Etot &
-                                  &       ,Xhat1D(rk,2)/Vtot &
-                                  &       ,Xhat1D(rk,3)/Mtot &
-                                  &       ,Xhat1D(rk,4)/Ctot
+     write(unitspc,'(7(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) &
+                                         &,Xhat1D(rk,2) &
+                                         &,Xhat1D(rk,3) &
+                                         &,Xhat1D(rk,4) &
+                                         &,Xhat1D(rk,5)/Xtot(5)
   enddo
   close(unitspc)
 
+
+  write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
+  filename = trim(dirname)//filename
+  open(unittot,file=filename,status='replace',form='formatted')
+  write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4),Xtot(5)
+  close(unittot)
+
   return
 end subroutine Fourier
-  
-subroutine Probability
-  use fieldmod
-  implicit none
-  integer::i,j,k,n
-  integer,parameter:: np=100
-  real(8),dimension(-np:np):: vxpro,vypro
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitpro=331
-  real(8):: vxmax, vymax
-
-  k=1
-  vxmax=0.0d0
-  vymax=0.0d0
-  do j=js,je
-  do i=is,ie
-     vxmax = max(vxmax, abs(v1(i,j,k)))
-     vymax = max(vymax, abs(v2(i,j,k)))
-  enddo
-  enddo
-
-  vxpro(:)= 0.0d0
-  vypro(:)= 0.0d0
-  do j=js,je
-  do i=is,ie 
-     n= min(np,max(-np,int(v1(i,j,k)*np/vxmax)))
-     vxpro(n) = vxpro(n) + dx*dy
-     n= min(np,max(-np,int(v2(i,j,k)*np/vymax)))
-     vypro(n) = vypro(n) + dx*dy
-  enddo
-  enddo
-
-  write(filename,'(a3,i5.5,a4)')"pro",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitpro,file=filename,status='replace',form='formatted')
-  write(unitpro,*) "# ",time
-  do n=-np,np
-     write(unitpro,'(4(1x,E12.3))') vxmax/np*n, vxpro(n), vymax/np*n, vypro(n)
-  enddo
-  close(unitpro)
-
-  return
-end subroutine Probability
