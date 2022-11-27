@@ -1,6 +1,6 @@
 reset
 
-pngflag=0
+pngflag=1
 if(pngflag==1)set terminal push
 if(pngflag==1)set terminal pngcairo dashed enhanced font "Helvetica,20"
 if(pngflag==1)set encoding utf8
