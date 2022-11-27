@@ -82,6 +82,8 @@ subroutine ReadData
   js=1+jgs
   ie=in-igs
   je=jn-jgs
+  ks=1
+  ke=1
 
   if(.not. is_inited)then
      allocate( x1b(in),x1a(in))
@@ -109,6 +111,9 @@ subroutine ReadData
   dx = x1b(2)-x1b(1)
   dy = x2b(2)-x2b(1)
 
+!$acc update device (in,jn,kn)
+!$acc update device (is,js,ks)
+!$acc update device (ie,je,ke)
 !$acc update device (x1a,x1b)
 !$acc update device (x2a,x2b)
 !$acc update device (d,v1,v2,v3,p)
@@ -188,11 +193,12 @@ implicit none
   real(8):: kr
   real(8):: dkx,dky,dkz,dkr
   
-  real(8) :: pi
 !$acc declare create(Xtot)
 !$acc declare create(dkx,dky,dkz)
 !$acc declare create(kx,ky,kz)
 !$acc declare create(Xhat2DC,Xhat2DS,Xhat1D)
+  
+  real(8) :: pi
 !$acc declare create(pi)
 end module spctrmod
 
@@ -218,7 +224,6 @@ subroutine Fourier
 !$acc update device (pi)
      is_inited = .true.
   endif
-
 !$acc kernels
   k=ks
 !$acc loop collapse(2) independent
@@ -230,6 +235,7 @@ subroutine Fourier
   enddo
 !$acc end kernels
 
+  
 !$acc kernels
 !$acc loop independent private(Xtotloc)
   do n=1,nvar
@@ -245,7 +251,6 @@ subroutine Fourier
   enddo
 !$acc end kernels
 !$acc update host (Xtot)
-
 
   dkx = 1.0d0/(dx*(in-2*igs))
   dky = 1.0d0/(dy*(jn-2*jgs))
