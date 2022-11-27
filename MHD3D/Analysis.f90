@@ -214,7 +214,7 @@ subroutine Fourier
   character(20),parameter::dirname="output/"
   character(40)::filename
   integer,parameter::unitspc=21
-  integer,parameter::unittot=21
+  integer,parameter::unittot=22
   real(8):: pi
 
   pi=acos(-1.0d0)

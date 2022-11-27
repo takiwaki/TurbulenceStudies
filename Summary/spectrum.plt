@@ -35,7 +35,7 @@ set log
 set xlabel "Wave number"
 set xrange [1:100]
 
-set ylabel "Kinematic energy"
+set ylabel "Kinetic energy"
 set yrange [*:*]
 
 set key right top
