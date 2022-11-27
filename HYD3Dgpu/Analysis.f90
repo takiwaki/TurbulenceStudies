@@ -48,7 +48,7 @@ program data_analysis
      close(unitcon)
   endif
 
-  FILENUMBER: do incr  = fbeg,fend
+  FILENUMBER: do incr  = fbeg,fend,10
      write(6,*) "file number",incr
      call ReadData
      call Vorticity
@@ -144,13 +144,11 @@ subroutine Vorticity
      allocate( vor3(in,jn,kn))
      allocate(  kin(in,jn,kn))
      allocate(   hk(in,jn,kn))
-!$acc update device (vor1,vor2,vor3)
-!$acc update device (kin,hk)
      is_inited = .true.
   endif
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent
   do k=ks,ke
   do j=js,je
   do i=is,ie
@@ -178,19 +176,26 @@ subroutine Vorticity
   enddo
 !$acc end kernels
 
+!!$acc update host (vor1,vor2,vor3)
+!!$acc update host (kin,hk)
+
+!  write(6,*) "debug 1",kin(is,js,ks),hk(is,js,ks)
+  
   return
 end subroutine Vorticity
   
 subroutine Fourier
   use fieldmod
   implicit none
-  integer::i,j,k
+  integer::i,j,k,n
   integer::ik,jk,kk,rk
-  integer,parameter:: nk=100
+  integer,parameter:: nk=128
   integer,parameter:: nvar=2
-  real(8),dimension(nvar):: X
+  real(8),dimension(:,:,:,:),allocatable:: X3D
+  real(8)                :: Xtotloc
   real(8),dimension(nvar):: Xtot
-  real(8),dimension(nk,nk,nk,2,nvar):: Xhat3D
+  real(8),dimension(nk,nk,nk,nvar):: Xhat3DC,Xhat3DS
+  real(8)                         :: Xhat3DCloc,Xhat3DSloc
   real(8),dimension(nk):: kx,ky,kz
   real(8),dimension(nk,nvar):: Xhat1D
   real(8):: kr
@@ -199,28 +204,63 @@ subroutine Fourier
   character(40)::filename
   integer,parameter::unitspc=21
   integer,parameter::unittot=22
-  
-  real(8):: pi
+  real(8),save:: pi
+  logical,save:: is_inited
+  data is_inited / .false. /
+!$acc declare create(X3D)
+!$acc declare create(Xtot)
+!$acc declare create(dkx,dky,dkz)
+!$acc declare create(kx,ky,kz)
+!$acc declare create(Xhat3DC,Xhat3DS,Xhat1D)
+!$acc declare create(pi)
+
+  if(.not. is_inited)then
+     allocate( X3D(is:ie,js:je,ks:ke,nvar))
+     pi=acos(-1.0d0)
+!$acc update device (X3D)
+!$acc update device (pi)
+     is_inited = .true.
+  endif
 
 !$acc kernels
-  pi=acos(-1.0d0)
-  Xtot(1)=0.0d0
-  Xtot(2)=0.0d0
-!$acc loop reduction(+:Xtot)
+!$acc loop collapse(3) independent
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     Xtot(1) = Xtot(1) + kin(i,j,k)*dx*dy*dz
-     Xtot(2) = Xtot(2) +  hk(i,j,k)*dx*dy*dz
+     X3D(i,j,k,1) = kin(i,j,k)
+     X3D(i,j,k,2) =  hk(i,j,k)
   enddo
   enddo
   enddo
 !$acc end kernels
+  
+!!$acc update host (X3D) 
+! write(6,*) "debug 2",X3D(is,js,ks,1),X3D(is,js,ks,2)
+  
 
 !$acc kernels
-  dkx = 1.0d0/(dx*in)
-  dky = 1.0d0/(dy*jn)
-  dkz = 1.0d0/(dz*jn)
+!$acc loop independent private(Xtotloc)
+  do n=1,nvar
+     Xtotloc = 0.0d0
+!$acc loop collapse(3)reduction(+:Xtotloc)
+  do k=ks,ke
+  do j=js,je
+  do i=is,ie
+     Xtotloc = Xtotloc + X3D(i,j,k,n)*dx*dy*dz
+  enddo
+  enddo
+  enddo
+     Xtot(n) = Xtotloc
+  enddo
+!$acc end kernels
+!$acc update host (Xtot)
+  
+!  write(6,*) "debug 3",Xtot(1),Xtot(2)
+  
+  dkx = 1.0d0/(dx*(in-2*igs))
+  dky = 1.0d0/(dy*(jn-2*jgs))
+  dkz = 1.0d0/(dz*(kn-2*kgs))
+!$acc update device (dkx,dky,dkz)
   
   do ik=1,nk
      kx(ik) = ik *dkx
@@ -231,57 +271,76 @@ subroutine Fourier
   do kk=1,nk
      ky(kk) = kk *dkz
   enddo
+!$acc update device (kx,ky,kz)
 
-
-!$acc loop independent
+!$acc kernels
+!$acc loop collapse(4) independent private(Xhat3DCloc)
+  nloop: do n=1,nvar
   do kk=1,nk
   do jk=1,nk
-  do ik=1,nk
-     Xhat3D(ik,jk,kk,:,:) = 0.0d0
-!$acc loop reduction(+:Xhat3D) private(X)
+  do ik=1,nk 
+     Xhat3DCloc = 0.0d0    
+!$acc loop collapse(3) reduction(+:Xhat3DCloc)
   do k=ks,ke
   do j=js,je
   do i=is,ie
-     X(1) =kin(i,j,k)
-     X(2) = hk(i,j,k)
-
-     Xhat3D(ik,jk,kk,1,1:nvar) = Xhat3D(ik,jk,kk,1,1:nvar) &
- &    + X(1:nvar) &
+     Xhat3DCloc = Xhat3DCloc &
+ &    + X3D(i,j,k,n) &
  &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j)+kz(kk)*x3b(k) )) & 
  &    *dx*dy*dz
 
-     Xhat3D(ik,jk,kk,2,1:nvar) = Xhat3D(ik,jk,kk,2,1:nvar) &
- &    + X(1:nvar) &
+  enddo
+  enddo
+  enddo
+     Xhat3DC(ik,jk,kk,n) = Xhat3DCloc
+  enddo
+  enddo
+  enddo
+
+  enddo nloop
+!$acc end kernels
+!$acc update host (Xhat3DC)
+
+!$acc kernels
+!$acc loop collapse(4) independent private(Xhat3DSloc)
+  do n=1,nvar  
+  do kk=1,nk
+  do jk=1,nk
+  do ik=1,nk     
+     Xhat3DSloc = 0.0d0
+!$acc loop collapse(3) reduction(+:Xhat3DSloc)
+  do k=ks,ke
+  do j=js,je
+  do i=is,ie
+     Xhat3DSloc = Xhat3DSloc &
+ &    + X3D(i,j,k,n) &
  &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j)+kz(kk)*x3b(k) )) & 
  &    *dx*dy*dz
 
   enddo
   enddo
   enddo
-
+     Xhat3DS(ik,jk,kk,n) = Xhat3DSloc 
+  enddo
   enddo
   enddo
   enddo
 !$acc end kernels
+!$acc update host (Xhat3DS)
 
-
-!$acc kernels
   Xhat1D(:,:) = 0.0d0
   dkr = dkx/sqrt(3.0d0) ! minimum k
-!$acc loop reduction(+:Xhat1D) 
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk
      kr = sqrt(kx(ik)**2 +ky(jk)**2 +kz(kk)**2)
      rk = min(nk,int(kr/dkr))
-     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat3D(ik,jk,kk,1,1:nvar)**2 & 
- &                         +                      Xhat3D(ik,jk,kk,1,1:nvar)**2)*dkx*dky*dkz
+     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(   Xhat3DS(ik,jk,kk,1:nvar)**2 & 
+                                           &       + Xhat3DC(ik,jk,kk,1:nvar)**2 &
+                                           &      )*dkx*dky*dkz
   enddo
   enddo
   enddo
-!$acc end kernels
-
-!$acc update host (dkr,Xtot,Xhat1D)
 
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
@@ -295,7 +354,7 @@ subroutine Fourier
   write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
   filename = trim(dirname)//filename
   open(unittot,file=filename,status='replace',form='formatted')
-  write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4)
+  write(unittot,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
   close(unittot)
 
   return
