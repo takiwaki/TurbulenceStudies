@@ -3,7 +3,7 @@ dird := bindata
 exe=Simulation.x
 ana=Analysis.x
 
-all: ${exe} ${MOVIES}
+all: ${exe} ${ana}
 
 .PHONY: all clean allclean
 
