@@ -176,8 +176,10 @@ subroutine Vorticity
   enddo
 !$acc end kernels
 
-!$acc update device (vor1,vor2,vor3)
-!$acc update device (kin,hk)
+!!$acc update host (vor1,vor2,vor3)
+!!$acc update host (kin,hk)
+
+!  write(6,*) "debug 1",kin(is,js,ks),hk(is,js,ks)
   
   return
 end subroutine Vorticity
@@ -231,7 +233,9 @@ subroutine Fourier
   enddo
   enddo
 !$acc end kernels
-!$acc update device (X3D)
+  
+!!$acc update host (X3D) 
+! write(6,*) "debug 2",X3D(is,js,ks,1),X3D(is,js,ks,2)
   
 
 !$acc kernels
@@ -250,7 +254,8 @@ subroutine Fourier
   enddo
 !$acc end kernels
 !$acc update host (Xtot)
-
+  
+!  write(6,*) "debug 3",Xtot(1),Xtot(2)
   
   dkx = 1.0d0/(dx*(in-2*igs))
   dky = 1.0d0/(dy*(jn-2*jgs))
