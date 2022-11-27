@@ -220,9 +220,7 @@ subroutine Fourier
   pi=acos(-1.0d0)
 
 
-!$acc kernels
   Xtot(:)=0.0d0
-!$acc loop reduction(+:X)
   do k=ks,ke
   do j=js,je
   do i=is,ie
@@ -234,7 +232,6 @@ subroutine Fourier
   enddo
   enddo
   enddo
-!$acc end kernels
 
   dkx = 1.0d0/(dx*(in-2*igs))
   dky = 1.0d0/(dy*(jn-2*jgs))
@@ -309,9 +306,9 @@ subroutine Fourier
   write(unitspc,*) "# ",time
   do rk=1,nk
      write(unitspc,'(7(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) &
-                                         &,Xhat1D(rk,2)/Xtot(2) &
-                                         &,Xhat1D(rk,3)/Xtot(3) &
-                                         &,Xhat1D(rk,4)/Xtot(4) &
+                                         &,Xhat1D(rk,2) &
+                                         &,Xhat1D(rk,3) &
+                                         &,Xhat1D(rk,4) &
                                          &,Xhat1D(rk,5)/Xtot(5)
   enddo
   close(unitspc)

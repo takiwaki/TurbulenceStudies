@@ -184,14 +184,8 @@ ${SPC}: ${ana} ${BIN} ${countfile}
 # simulation
 #################
 
-run: ${BIN}
-	./${exe}
-
 ${BIN}: ${exe}
 	./${exe}
-
-
-simulation-code: ${exe} 
 
 ${ana}: Analysis.f90
 	${fc} ${fopt} $< -o ${ana}
