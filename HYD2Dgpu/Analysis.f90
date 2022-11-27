@@ -132,8 +132,8 @@ subroutine Vorticity
   if(.not. is_inited)then
      allocate( vor(in,jn,kn))
      allocate( kin(in,jn,kn))
-!!$acc update device (vor1)
-!!$acc update device (kin)
+!$acc update device (vor)
+!$acc update device (kin)
      is_inited = .true.
   endif
 
@@ -235,10 +235,10 @@ subroutine Fourier
   do n=1,nvar
      Xtotloc = 0.0d0
   k=ks
-!$acc loop collapse(2)reduction(+:Xtotloc)
+!$acc loop collapse(2) reduction(+:Xtotloc)
   do j=js,je
   do i=is,ie
-     Xtotloc = Xtotloc + X2D(i,j,n)*dx*dy
+     Xtotloc = Xtotloc + X2D(i,j,n) * dx*dy
   enddo
   enddo
      Xtot(n) = Xtotloc
@@ -272,7 +272,7 @@ subroutine Fourier
      Xhat2DCloc = Xhat2DCloc &
  &    + X2D(i,j,n) &
  &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
+ &    * dx*dy
 
   enddo
   enddo
@@ -285,7 +285,7 @@ subroutine Fourier
      Xhat2DSloc = Xhat2DSloc &
  &    + X2D(i,j,n) &
  &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
+ &    * dx*dy
 
   enddo
   enddo
