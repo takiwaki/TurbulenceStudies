@@ -1,0 +1,147 @@
+##########################################
+# Makefile for Turbulence Studies
+##########################################
+
+##########################################
+# Timeseqencial data and figures
+##########################################
+
+######################
+# directory
+######################
+
+dira := output
+dirf := figures
+dirm := movies
+
+countfile=control.dat
+
+######################
+# files
+######################
+
+filename = ${dira}/vor00001.dat
+fileexists = $(shell ls | grep ${filename})
+ifeq (${fileexists}, ${filename})
+    VOR= $(shell ls ${dira}/vor*.dat)
+else
+    VOR= ${filename}
+endif
+
+# 2D cross section
+VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
+
+# spectrum
+SPC   = $(patsubst ${dira}/vor%.dat,${dira}/spc%.dat,$(VOR))
+KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
+VSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/vsp%.png,$(SPC))
+
+# intgrated values 
+TOT   = $(patsubst ${dira}/vor%.dat,${dira}/tot%.dat,$(VOR))
+
+##########################################
+# Movies
+##########################################
+
+kinmovie=${dirm}/anikin.mp4
+vormovie=${dirm}/anivor.mp4
+
+2Dmovies=${vormovie} ${kinmovie}
+
+kspmovie=${dirm}/aniksp.mp4
+vspmovie=${dirm}/anivsp.mp4
+
+specmovies= ${kspmovie} ${vspmovie}
+
+
+moviefile=${2Dmovies} ${specmovies}
+##########################################
+# Final spectrum
+##########################################
+
+specfile=k-E_k.png
+
+##########################################
+# Time evolution
+##########################################
+
+timefile=t-E.png
+
+##########################################
+# Proceadures
+##########################################
+
+all: ${moviefile} ${specfile} ${timefile}
+
+.PHONY: all clean allclean
+
+##########################################
+# Time evolution
+##########################################
+${timefile}: TimeEvolution.plt t-prof.dat
+	gnuplot TimeEvolution.plt
+
+t-prof.dat: MakeTimeseq.sh ${TOT}
+	./MakeTimeseq.sh
+
+#################
+# ffmpeg
+#################
+
+movie: ${moviefile}
+
+${vormovie}: MakeMovie.sh ${VORPNG}
+	./MakeMovie.sh vor
+
+${kinmovie}: MakeMovie.sh ${KINPNG}
+	./MakeMovie.sh kin
+
+${kspmovie}: MakeMovie.sh ${KSPPNG}
+	./MakeMovie.sh ksp
+
+${vspmovie}: MakeMovie.sh ${VSPPNG}
+	./MakeMovie.sh vsp
+
+#################
+# gnuplot
+#################
+
+
+########################
+# 2D cross section
+########################
+
+2Dsnaps: ${VORPNG} ${KINPNG} 
+
+${VORPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
+${KINPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
+########################
+# spectrum
+########################
+
+spectrum: ${specfile}
+
+${specfile}: spectrum-fin.plt
+	gnuplot spectrum-fin.plt
+
+specs: ${KSPPNG} ${VSPPNG} 
+
+${KSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+${VSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+#################
+# clean up
+#################
+clean:
+	rm -f *~
+
+allclean:
+	rm -fr ${dirm} ${dirf} ${dira}
