@@ -365,7 +365,7 @@
       integer::i,j,k
       
 !$acc kernels      
-!$acc loop independent 
+!$acc loop collapse(3) independent 
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -395,7 +395,7 @@
       implicit none
       integer::i,j,k
 !$acc kernels      
-!$acc loop independent
+!$acc loop collapse(3) independent
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -438,7 +438,7 @@
       integer::i,j,k
 !$acc kernels    
       dtmin=1.0d90
-!$acc loop reduction(min:dtmin)  
+!$acc loop collapse(3) reduction(min:dtmin)  
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -471,7 +471,7 @@
       integer::i,j,k
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent
       do k=1,kn-1
       do j=1,jn-1
       do i=1,in-1
@@ -571,10 +571,9 @@
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
       
 !$acc kernels      
-!$acc loop independent
+!$acc loop collapse(3) independent private(dsv,dsvp,dsvm)
       do k=ks,ke
       do j=js,je
-!$acc loop independent private(dsv,dsvp,dsvm)
       do i=is-1,ie+1
          dsvp(:) = (svc(:,i+1,j,k) -svc(:,i,j,k)                 )
          dsvm(:) = (                svc(:,i,j,k) - svc(:,i-1,j,k))
@@ -589,7 +588,7 @@
 !$acc end kernels
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(ptl,css,cts)
       do k=ks,ke
       do j=js,je
       do i=is,ie+1
@@ -719,10 +718,9 @@
 !$acc end kernels
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(leftst,rigtst,nflux)
       do k=ks,ke
       do j=js,je
-!$acc loop independent  private(leftst,rigtst,nflux)
       do i=is,ie+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
@@ -771,10 +769,9 @@
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(dsv,dsvp,dsvm)
       do k=ks,ke
       do i=is,ie
-!$acc loop independent private(dsv,dsvp,dsvm)
       do j=js-1,je+1
          dsvp(:) = (svc(:,i,j+1,k) -svc(:,i,j,k)                 )
          dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j-1,k))
@@ -793,7 +790,7 @@
 !$acc end kernels
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(ptl,css,cts)
       do k=ks,ke
       do i=is,ie
       do j=js,je+1
@@ -913,10 +910,9 @@
 !$acc end kernels
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(leftst,rigtst,nflux)
       do k=ks,ke
       do i=is,ie
-!$acc loop independent  private(leftst,rigtst,nflux)
       do j=js,je+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
@@ -966,10 +962,9 @@
 !$acc data present(leftco,rigtco,leftpr,rigtpr)
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(dsv,dsvp,dsvm)
       do j=js,je
       do i=is,ie
-!$acc loop independent private(dsv,dsvp,dsvm)
       do k=ks-1,ke+1
          dsvp(:) = (svc(:,i,j,k+1) -svc(:,i,j,k)                 )
          dsvm(:) = (                svc(:,i,j,k) - svc(:,i,j,k-1))
@@ -985,7 +980,7 @@
 !$acc end kernels
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(ptl,css,cts)
       do j=js,je
       do i=is,ie
       do k=ks,ke+1
@@ -1110,10 +1105,9 @@
 !$acc end kernels
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent private(leftst,rigtst,nflux)
       do j=js,je
       do i=is,ie
-!$acc loop independent private(leftst,rigtst,nflux)
       do k=ks,ke+1
          leftst(:)=leftco(:,i,j,k)
          rigtst(:)=rigtco(:,i,j,k)
@@ -1712,7 +1706,7 @@
       integer::i,j,k
 
 !$acc kernels
-!$acc loop independent
+!$acc loop collapse(3) independent
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -1832,7 +1826,7 @@
       ch1l = 0.0d0; ch2l = 0.0d0; ch3l = 0.0d0
       dhd = huge
       dh1l =  huge; dh2l =  huge; dh3l =  huge
-!$acc loop reduction(max:chd)
+!$acc loop collapse(3) reduction(max:chd)
       do k=ks,ke
       do j=js,je
       do i=is,ie
@@ -1882,7 +1876,7 @@
       dh1l=huge
       dh2l=huge
       dh3l=huge
-!$acc loop independent
+!$acc loop collapse(3) independent
       do k=ks,ke
       do j=js,je
       do i=is,ie
