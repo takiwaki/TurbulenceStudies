@@ -1,8 +1,8 @@
-# 3D hydrodynamic deacaying turbulence
+# 3D magneto-hydrodynamic deacaying turbulence
 [Go to top](../README.md)  
 
 ## Setups and Results
-[Go to Notion page.](https://www.notion.so/Turbulence-Studies-e4836ad642684f8f992d54a1f7e22635#b97885baf6de44b0acaeb196d96832fa)
+[Go to Notion page.](https://www.notion.so/Turbulence-Studies-e4836ad642684f8f992d54a1f7e22635#9f4fd3d31ffc4343aaa5b0c82e430090)
 
 ## How to run
 
