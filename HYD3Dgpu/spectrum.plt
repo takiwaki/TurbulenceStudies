@@ -22,12 +22,21 @@ set style line 92 lt 2 lw 6 lc rgb "black" #
 if (exist("ifnum")==0 ) ifnum=100
 input= sprintf("output/spc%05d.dat",ifnum)
 
+command = sprintf("ls %s",input)
+inputflag   = system(command)
+
+command = sprintf(" head -n 1 %s | sed 's/#//' ",input)
+time   = system(command)
+print "time= ".time
+
+
 ##########################################
 # Kinetic energy
 ##########################################
 
 outputfile= sprintf("figures/ksp%05d.png",ifnum)
 if(pngflag==1)set output outputfile
+
 
 set log 
 set format y "10^{%L}"
@@ -40,9 +49,13 @@ set yrange [*:*]
 
 set key right top
 
+set label 1 time at screen 0.65, screen 0.845
+
 plot NaN notitle \
 , input  u 1:2  notitle w l ls 1  \
 #, (0.1)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+
+unset label 1
 
 ##########################################
 # Kinetic helicity
@@ -55,9 +68,13 @@ set format y "10^{%L}"
 
 set ylabel "Kinematic helicity"
 
+set label 1 time at screen 0.65, screen 0.845
+
 plot NaN notitle \
 , input  u 1:3  notitle w l ls 1  \
 #, (2e3)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+
+unset label 1
 
 reset
 set term pop
