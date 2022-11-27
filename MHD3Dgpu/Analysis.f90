@@ -227,41 +227,50 @@ subroutine Vorticity
   enddo
   enddo
 !$acc end kernels
+
   
+!$acc update host (kin,hk)
+!$acc update host (mag,hmm,hcr)
+  write(6,*)"debug1",kin(is,js,ks),hk(is,js,ks),mag(is,js,ks),hmm(is,js,ks),hcr(is,js,ks)
   return
 end subroutine Vorticity
 
-subroutine Fourier
-  use fieldmod
-  implicit none
-  integer::i,j,k,n
-  integer::ik,jk,kk,rk
+module spctrmod
+implicit none
+  real(8),dimension(:,:,:,:),allocatable:: X3D
+!$acc declare create(X3D)
   integer,parameter:: nk=128
   integer,parameter:: nvar=5
-  real(8),dimension(:,:,:,:),allocatable:: X3D
-  real(8),dimension(nvar):: X
-  real(8)                :: Xtotloc
   real(8),dimension(nvar):: Xtot
   real(8),dimension(nk,nk,nk,nvar):: Xhat3DC,Xhat3DS
-  real(8)                :: Xhat3DCloc,Xhat3DSloc
   real(8),dimension(nk):: kx,ky,kz
   real(8),dimension(nk,nvar):: Xhat1D
   real(8):: kr
   real(8):: dkx,dky,dkz,dkr
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitspc=21
-  integer,parameter::unittot=22
-  real(8),save:: pi
-  logical,save:: is_inited
-  data is_inited / .false. /
-!$acc declare create(X3D)
+  
+  real(8) :: pi
 !$acc declare create(Xtot)
 !$acc declare create(dkx,dky,dkz)
 !$acc declare create(kx,ky,kz)
 !$acc declare create(Xhat3DC,Xhat3DS,Xhat1D)
 !$acc declare create(pi)
+end module spctrmod
 
+subroutine Fourier
+  use fieldmod
+  use spctrmod
+  implicit none
+  integer::i,j,k,n
+  integer::ik,jk,kk,rk
+  real(8):: Xtotloc
+  real(8):: Xhat3DCloc,Xhat3DSloc
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer,parameter::unitspc=21
+  integer,parameter::unittot=22
+  logical,save:: is_inited
+  data is_inited / .false. /
+  
   if(.not. is_inited)then
      allocate( X3D(is:ie,js:je,ks:ke,nvar))
      pi=acos(-1.0d0)
@@ -283,10 +292,11 @@ subroutine Fourier
   enddo
   enddo
   enddo
-!$acc end kernels
-!$acc update device (X3D)
-  
+!$acc end kernels  
 
+!$acc update host (X3D)
+  write(6,*)"debug2",X3D(is,js,ks,1:nvar)
+ 
 !$acc kernels
 !$acc loop independent private(Xtotloc)
   do n=1,nvar
@@ -303,6 +313,8 @@ subroutine Fourier
   enddo
 !$acc end kernels
 !$acc update host (Xtot)
+  
+  write(6,*)"debug3",Xtot(1:nvar)
 
   
   dkx = 1.0d0/(dx*(in-2*igs))

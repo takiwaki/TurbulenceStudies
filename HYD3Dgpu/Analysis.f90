@@ -144,6 +144,8 @@ subroutine Vorticity
      allocate( vor3(in,jn,kn))
      allocate(  kin(in,jn,kn))
      allocate(   hk(in,jn,kn))
+!!$acc update device (vor1,vor2,vor3)
+!!$acc update device (kin,hk)
      is_inited = .true.
   endif
 
