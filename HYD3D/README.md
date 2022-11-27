@@ -1,42 +1,70 @@
 # 3D hydrodynamic deacaying turbulence
 [Go to top](../README.md)  
 
+## Setups and Results
+[Go to Notion page.](https://www.notion.so/Turbulence-Studies-e4836ad642684f8f992d54a1f7e22635#b97885baf6de44b0acaeb196d96832fa)
+
 ## How to run
-To run the code, you just type `make`.
+
+### compile 
+To run the code, you need to compile 'Simulation.f90'.
     
-    make
+    make Simulation.x
     
+Then `Simulation.x`is made in this directory.
+
+### run
+Let's run the code.
     
-Then `Simulation.x`is compiled and automatically executed.
+    ./Simulation.x
+    
 The simulation data is saved in `bindata/`.
 
-The data is binary file, to make figures analyis is done by `Analysis.x`.
+### visualization
+To visulaize the data, let us make `Visulatization.x`.
+    
+    make Visulatization.x
+    
+Now you have many time-snapshots of data. To count it, use a script.
+    
+    CountBindata.sh
+   
+See the file, `cat control.dat`. You can know the number of files.
+Then preparation is done. Run the analyis.
+    
+    ./Visulatization.x
+    
+The output is saved in `output/`.
+### 2D plots and animation.
+If you need 2D snapshots. 
+    
+    make 2Dsnaps
+   
+### 3D plots
+The output is saved in `vstdata/`. Using VisIt, you can make 3Dfigures.
 
-## Initial condition
-stream function is given.
+### analysis
+To analyze the data, let us make `Analysis.x`.
+    
+    make Analysis.x
+    
+Now you have many time-snapshots of data. To count it, use a script.
+    
+    CountBindata.sh
+   
+See the file, `cat control.dat`. You can know the number of files.
+Then preparation is done. Run the analyis.
+    
+    ./Analyis.x
+    
+The output is saved in `output/`.
 
-$$ \psi \propto \sin(2\pi k x)\sin(2\pi k y).$$
-
-Initial velocity is set from $\psi$.
-
-$$ v_x = \partial_y \psi, v_y = -\partial_x \psi, $$
-
-## Analysis
-
-Animation of vorticity will be made.
-
-$$ \omega =  \partial_x v_y - \partial_y v_x $$
-
-The spectrum of kinetic energy and enstropy is calculated. 
-
-The spectrum of variable, $X$ ,is calculated as follows.
-
-First 3D Fourier transformation is given.
-
-$$\hat{X}_{{\rm 3D},c}(k_x,k_y,k_z) = \iint dx dy dz X \cos(2\pi (k_x x +k_y y +k_z z))$$
-
-$$\hat{X}_{{\rm 3D},s}(k_x,k_y,k_z) = \iint dx dy dz X \sin(2\pi (k_x x +k_y y +k_z z))$$
-
-Then 1D Fourier transformation is given.
-
-$$\hat{X}_{\rm 1D} dk = \sqrt{ \hat{X}_{{\rm 3D},c}^2+\hat{X}_{{\rm 3D},s}^2} dk_x dk_y dk_z $$
+### spectrum
+To obtain the spectrum
+   
+      make spectrum
+      
+## Do all of them
+To do all in one command, you just type `make` or `make all`.
+   
+      make all

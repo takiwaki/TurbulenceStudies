@@ -58,15 +58,46 @@ HKSPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hks%.png,$(SPC))
 
 kinmovie=${dirm}/anikin.mp4
 vormovie=${dirm}/anivor.mp4
+
+2Dmovies=${vormovie} ${kinmovie}
+
 kspmovie=${dirm}/aniksp.mp4
 hksmovie=${dirm}/anihks.mp4
 
-moviefile=${vormovie} ${kinmovie} ${kspmovie} ${hksmovie}
+specmovies= ${kspmovie} ${vspmovie}
+
+moviefile=${2Dmovies} ${specmovies}
+
+##########################################
+# Final spectrum
+##########################################
+
+specfile=k-E_k.png
+
+##########################################
+# Time evolution
+##########################################
+
+timefile=t-E.png
+
+##########################################
+# Proceadures
+##########################################
+
+all: ${exe} ${moviefile} ${specfile} ${timefile}
 
 all: ${exe} ${ana} ${vis} ${moviefile}
 
 .PHONY: all clean allclean
 
+##########################################
+# Time evolution
+##########################################
+${timefile}: TimeEvolution.plt t-prof.dat
+	gnuplot TimeEvolution.plt
+
+t-prof.dat: MakeTimeseq.sh ${TOT}
+	./MakeTimeseq.sh
 #################
 # ffmpeg
 #################
@@ -89,15 +120,33 @@ ${hksmovie}: MakeMovie.sh ${HKSPNG}
 # gnuplot
 #################
 
-spectrum: ${specfile}
-
-${specfile}: spectrum.plt
-	gnuplot spectrum.plt
-
+########################
+# 2D cross section
+########################
 2Dsnaps: ${VORPNG}
 
 ${VORPNG}: vor.plt MakeSnap.sh ${VOR}
 	./MakeSnap.sh vor.plt
+
+${KINPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor.plt
+
+########################
+# spectrum
+########################
+
+spectrum: ${specfile}
+
+${specfile}: spectrum-fin.plt
+	gnuplot spectrum-fin.plt
+
+specs: ${KSPPNG} ${VSPPNG} 
+
+${KSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
+
+${VSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spectrum.plt
 
 #################
 # visualization
@@ -116,19 +165,13 @@ ${VOR}: ${vis} ${BIN} ${countfile}
 # analysis
 #################
 
-analysis-code: ${ana} 
-
 count-number: ${countfile}
 
-run-analysis: ${ana} ${count}
-	./${ana}
-
-${countfile}: Init.sh
-	./Init.sh
+${countfile}: CountBindata.sh
+	./CountBindata.sh
 
 ${SPC}: ${ana} ${BIN} ${countfile}
 	./${ana}
-
 
 #################
 # simulation
@@ -156,6 +199,4 @@ clean:
 	rm -f ${exe} ${ana} *.o *.mod *~
 
 allclean:
-	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${count}
-
-
+	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${countfile}
