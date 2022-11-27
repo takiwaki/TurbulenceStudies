@@ -9,11 +9,26 @@ module fieldmod
     real(8),dimension(:),allocatable:: x1b,x2b
     real(8),dimension(:),allocatable:: x1a,x2a
     real(8),dimension(:,:,:),allocatable:: d,v1,v2,v3,p
-    real(8),dimension(:,:,:),allocatable:: b1,b2,b3,bp
-    real(8),dimension(:,:,:),allocatable:: vor ! vorticity
-    real(8),dimension(:,:,:),allocatable:: jcd ! current density
+    real(8),dimension(:,:,:),allocatable:: vor
+    real(8),dimension(:,:,:),allocatable:: kin
     real(8):: dx,dy
-    real(8):: Etot,Vtot
+
+!$acc declare create(incr)
+!$acc declare create(time,dt)
+!$acc declare create(in,jn,kn)
+!$acc declare create(izone,jzone,kzone)
+!$acc declare create(igs,jgs,kgs)
+!$acc declare create(is,js,ks)
+!$acc declare create(ie,je,ke)
+      
+!$acc declare create(x1a,x1b)
+!$acc declare create(x2a,x2b)
+      
+!$acc declare create(d,v1,v2,v3,p)
+!$acc declare create(vor)
+!$acc declare create(kin)
+
+!$acc declare create(dx,dy)
 end module fieldmod
 
 program data_analysis
@@ -36,7 +51,6 @@ program data_analysis
      call ReadData
      call Vorticity
      call Fourier
-     call Probability
   enddo FILENUMBER
 
   stop
@@ -76,10 +90,6 @@ subroutine ReadData
      allocate(v1(in,jn,kn))
      allocate(v2(in,jn,kn))
      allocate(v3(in,jn,kn))
-     allocate(b1(in,jn,kn))
-     allocate(b2(in,jn,kn))
-     allocate(b3(in,jn,kn))
-     allocate(bp(in,jn,kn))
      allocate( p(in,jn,kn))
      is_inited = .true.
   endif
@@ -93,16 +103,17 @@ subroutine ReadData
   read(unitbin) v1(:,:,:)
   read(unitbin) v2(:,:,:)
   read(unitbin) v3(:,:,:)
-  read(unitbin) b1(:,:,:)
-  read(unitbin) b2(:,:,:)
-  read(unitbin) b3(:,:,:)
-  read(unitbin) bp(:,:,:)
   read(unitbin)  p(:,:,:)
   close(unitbin)
   
   dx = x1b(2)-x1b(1)
   dy = x2b(2)-x2b(1)
 
+!$acc update device (x1a,x1b)
+!$acc update device (x2a,x2b)
+!$acc update device (d,v1,v2,v3,p)
+!$acc update device (dx,dy)
+  
   return
 end subroutine ReadData
 
@@ -120,33 +131,40 @@ subroutine Vorticity
 
   if(.not. is_inited)then
      allocate( vor(in,jn,kn))
-     allocate( jcd(in,jn,kn))
+     allocate( kin(in,jn,kn))
+!!$acc update device (vor1)
+!!$acc update device (kin)
      is_inited = .true.
   endif
 
+!$acc kernels
   k=1
+!$acc loop collapse(2) independent
   do j=js,je
   do i=is,ie
      vor(i,j,k)= (v2(i  ,j,k)-v2(i-1,j,k))/dx*0.5 &
                &+(v2(i+1,j,k)-v2(i  ,j,k))/dx*0.5 &
                &-(v1(i,j  ,k)-v1(i,j-1,k))/dy*0.5 &
-               &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5
-     jcd(i,j,k)= (b2(i  ,j,k)-b2(i-1,j,k))/dx*0.5 &
-               &+(b2(i+1,j,k)-b2(i  ,j,k))/dx*0.5 &
-               &-(b1(i,j  ,k)-b1(i,j-1,k))/dy*0.5 &
-               &-(b1(i,j+1,k)-b1(i,j  ,k))/dy*0.5 
+               &-(v1(i,j+1,k)-v1(i,j  ,k))/dy*0.5 
+     kin(i,j,k)= 0.5d0*d(i,j,k)*( &
+               & +v1(i,j,k)*v1(i,j,k) &
+               & +v2(i,j,k)*v2(i,j,k) &
+               & )
   enddo
   enddo
+!$acc end kernels
+!$acc update host (vor)
+!$acc update host (kin)
 
   write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
   filename = trim(dirname)//filename
   open(unitvor,file=filename,status='replace',form='formatted')
 
-  write(unitvor,*) "# ",time
-  write(unitvor,*) "# x y omega_z"
+  write(unitvor,'(1a,4(1x,E12.3))') "#",time
+  write(unitvor,'(1a,4(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:E_kin "
   do j=js,je
   do i=is,ie
-     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k)
+     write(unitvor,'(4(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),kin(i,j,k)
   enddo
      write(unitvor,*)
   enddo
@@ -157,44 +175,81 @@ subroutine Vorticity
   return
 end subroutine Vorticity
   
+module spctrmod
+implicit none
+  real(8),dimension(:,:,:),allocatable:: X2D
+!$acc declare create(X2D)
+  integer,parameter:: nk=128
+  integer,parameter:: nvar=2
+  real(8),dimension(nvar):: Xtot
+  real(8),dimension(nk,nk,nvar):: Xhat2DC,Xhat2DS
+  real(8),dimension(nk):: kx,ky,kz
+  real(8),dimension(nk,nvar):: Xhat1D
+  real(8):: kr
+  real(8):: dkx,dky,dkz,dkr
+  
+  real(8) :: pi
+!$acc declare create(Xtot)
+!$acc declare create(dkx,dky,dkz)
+!$acc declare create(kx,ky,kz)
+!$acc declare create(Xhat2DC,Xhat2DS,Xhat1D)
+!$acc declare create(pi)
+end module spctrmod
+
 subroutine Fourier
   use fieldmod
+  use spctrmod
   implicit none
-  integer::i,j,k
+  integer::i,j,k,n
   integer::ik,jk,kk,rk
-  integer,parameter:: nk=100
-  real(8),dimension(nk,nk):: Ehat2Dc,Vhat2Dc,Ehat2Ds,Vhat2Ds
-  real(8),dimension(nk):: kx,ky
-  real(8),dimension(nk):: Ehat1D,Vhat1D
-  real(8):: kr
-  real(8):: dkx,dky,dkr
+  real(8):: Xtotloc
+  real(8):: Xhat2DCloc,Xhat2DSloc
   character(20),parameter::dirname="output/"
   character(40)::filename
   integer,parameter::unitspc=21
-  real(8):: pi
+  integer,parameter::unittot=22
+  logical,save:: is_inited
+  data is_inited / .false. /
 
-  pi=acos(-1.0d0)
+  if(.not. is_inited)then
+     allocate( X2D(is:ie,js:je,nvar))
+     pi=acos(-1.0d0)
+!$acc update device (X2D)
+!$acc update device (pi)
+     is_inited = .true.
+  endif
 
-  k=1
-  
-  Etot=0.0d0
-  Vtot=0.0d0
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
   do j=js,je
   do i=is,ie
-     Etot = Etot &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  & 
- &    *dx*dy
-
-     Vtot = Vtot &
- &    + vor(i,j,k)**2                               & 
- &    *dx*dy
-
+     X2D(i,j,1) = kin(i,j,k)
+     X2D(i,j,2) = vor(i,j,k)**2
   enddo
   enddo
+!$acc end kernels
 
-  dkx = 1.0d0/(dx*in)
-  dky = 1.0d0/(dy*jn)
+!$acc kernels
+!$acc loop independent private(Xtotloc)
+  do n=1,nvar
+     Xtotloc = 0.0d0
+  k=ks
+!$acc loop collapse(2)reduction(+:Xtotloc)
+  do j=js,je
+  do i=is,ie
+     Xtotloc = Xtotloc + X2D(i,j,n)*dx*dy
+  enddo
+  enddo
+     Xtot(n) = Xtotloc
+  enddo
+!$acc end kernels
+!$acc update host (Xtot)
+
+
+  dkx = 1.0d0/(dx*(in-2*igs))
+  dky = 1.0d0/(dy*(jn-2*jgs))
+!$acc update device (dkx,dky)
   
   do ik=1,nk
      kx(ik) = ik *dkx
@@ -202,107 +257,74 @@ subroutine Fourier
   do jk=1,nk
      ky(jk) = jk *dky
   enddo
+!$acc update device (kx,ky)
 
-  Ehat2Dc(:,:) = 0.0d0
-  Ehat2Ds(:,:) = 0.0d0
-  Vhat2Dc(:,:) = 0.0d0
-  Vhat2Ds(:,:) = 0.0d0
 
-  do ik=1,nk
+!$acc kernels
+!$acc loop collapse(3) independent private(Xhat2DCloc,Xhat2DSloc)
+  nloop: do n=1,nvar
   do jk=1,nk
-
+  do ik=1,nk 
+     Xhat2DCloc = 0.0d0    
+!$acc loop collapse(2) reduction(+:Xhat2DCloc)
   do j=js,je
   do i=is,ie
-     Ehat2Dc(ik,jk) = Ehat2Dc(ik,jk) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  &
- &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
-     Ehat2Ds(ik,jk) = Ehat2Ds(ik,jk) &
- &    + 0.5d0*d(i,j,k)                              &
- &    *(v1(i,j,k)*v1(i,j,k) + v2(i,j,k)*v2(i,j,k))  &
- &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
- &    *dx*dy
-
-     Vhat2Dc(ik,jk) = Vhat2Dc(ik,jk) &
- &    + vor(i,j,k)**2                               &
+     Xhat2DCloc = Xhat2DCloc &
+ &    + X2D(i,j,n) &
  &    * cos(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
  &    *dx*dy
 
-     Vhat2Ds(ik,jk) = Vhat2Ds(ik,jk) &
- &    + vor(i,j,k)**2                               &
+  enddo
+  enddo
+     Xhat2DC(ik,jk,n) = Xhat2DCloc
+  
+     Xhat2DSloc = 0.0d0
+!$acc loop collapse(2) reduction(+:Xhat2DSloc)
+  do j=js,je
+  do i=is,ie
+     Xhat2DSloc = Xhat2DSloc &
+ &    + X2D(i,j,n) &
  &    * sin(2.0d0*pi*(kx(ik)*x1b(i)+ky(jk)*x2b(j))) & 
  &    *dx*dy
 
   enddo
   enddo
-
+     Xhat2DS(ik,jk,n) = Xhat2DSloc 
   enddo
   enddo
 
-  Ehat1D(:) = 0.0d0
+  enddo nloop
+!$acc end kernels
+!$acc update host (Xhat2DC)
+!$acc update host (Xhat2DS)
+
+  
+
+  Xhat1D(:,1:nvar) = 0.0d0
   dkr = dkx/sqrt(2.0d0) ! minimum k
   do ik=1,nk
   do jk=1,nk
      kr = sqrt(kx(ik)**2+ky(jk)**2)
      rk = min(nk,int(kr/dkr))
-     Ehat1D(rk) = Ehat1D(rk) + sqrt(Ehat2Dc(ik,jk)**2 + Ehat2Ds(ik,jk)**2)*dkx*dky
-     Vhat1D(rk) = Vhat1D(rk) + sqrt(Vhat2Dc(ik,jk)**2 + Vhat2Ds(ik,jk)**2)*dkx*dky 
+     Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat2DC(ik,jk,1:nvar)**2 + Xhat2DS(ik,jk,1:nvar)**2)*dkx*dky/dkr
   enddo
   enddo
 
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
   open(unitspc,file=filename,status='replace',form='formatted')
-  write(unitspc,*) "# ",time
+  write(unitspc,'(1a,1(1x,E12.3))') "#",time
   do rk=1,nk
-     write(unitspc,'(3(1x,E12.3))') rk*dkr,Ehat1D(rk)/Etot,Vhat1D(rk)/Vtot
+     write(unitspc,'(1x,6(1x,E12.3))') rk*dkr,Xhat1D(rk,1)/Xtot(1) & ! kinetic energy
+                                           & ,Xhat1D(rk,2)/Xtot(2)   ! enstrophy
   enddo
   close(unitspc)
 
+  write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
+  filename = trim(dirname)//filename
+  open(unittot,file=filename,status='replace',form='formatted')
+  write(unittot,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
+  close(unittot)
+
   return
 end subroutine Fourier
-  
-subroutine Probability
-  use fieldmod
-  implicit none
-  integer::i,j,k,n
-  integer,parameter:: np=100
-  real(8),dimension(-np:np):: vxpro,vypro
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitpro=331
-  real(8):: vxmax, vymax
-
-  k=1
-  vxmax=0.0d0
-  vymax=0.0d0
-  do j=js,je
-  do i=is,ie
-     vxmax = max(vxmax, abs(v1(i,j,k)))
-     vymax = max(vymax, abs(v2(i,j,k)))
-  enddo
-  enddo
-
-  vxpro(:)= 0.0d0
-  vypro(:)= 0.0d0
-  do j=js,je
-  do i=is,ie 
-     n= min(np,max(-np,int(v1(i,j,k)*np/vxmax)))
-     vxpro(n) = vxpro(n) + dx*dy
-     n= min(np,max(-np,int(v2(i,j,k)*np/vymax)))
-     vypro(n) = vypro(n) + dx*dy
-  enddo
-  enddo
-
-  write(filename,'(a3,i5.5,a4)')"pro",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitpro,file=filename,status='replace',form='formatted')
-  write(unitpro,*) "# ",time
-  do n=-np,np
-     write(unitpro,'(4(1x,E12.3))') vxmax/np*n, vxpro(n), vymax/np*n, vypro(n)
-  enddo
-  close(unitpro)
-
-  return
-end subroutine Probability

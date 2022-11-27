@@ -1,9 +1,30 @@
-dird := bindata
+##########################################
+# Makefile for Turbulence Studies
+##########################################
+
+##########################################
+# Programs
+##########################################
 
 exe=Simulation.x
 ana=Analysis.x
 
-all: ${exe} ${MOVIES}
+######################	
+# complile options
+######################
+fc= nvfortran
+foptopenacc = -Minfo=accel -acc
+fopt = -g -traceback -O2
+#fopt = -g -traceback -check all -fpe0
+
+######################
+# directory
+######################
+
+dird := bindata
+dira := output
+
+all: ${exe} ${ana}
 
 .PHONY: all clean allclean
 
@@ -11,10 +32,6 @@ all: ${exe} ${MOVIES}
 # Fortran
 #################
 
-fc= nvfortran
-foptopenacc = -Minfo=accel -acc
-fopt = -g -traceback -O2
-#fopt = -g -traceback -check all -fpe0
 
 ${exe}: Simulation.f90
 	${fc} ${fopt} ${foptopenacc} $< -o ${exe}
@@ -29,4 +46,4 @@ clean:
 	rm -f ${exe} *.o *.mod *~
 
 allclean:
-	rm -fr ${dird}
+	rm -fr ${dird} ${dira}
