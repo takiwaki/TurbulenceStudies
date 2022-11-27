@@ -1,0 +1,108 @@
+##########################################
+# Makefile for Turbulence Studies
+##########################################
+
+##########################################
+# Timeseqencial data and figures
+##########################################
+
+######################
+# directory
+######################
+
+dira := output
+dirf := figures
+dirm := movies
+
+######################
+# files
+######################
+
+filename = ${dira}/spc00001.dat
+fileexists = $(shell ls | grep ${filename})
+ifeq (${fileexists}, ${filename})
+    SPC= $(shell ls ${dira}/spc*.dat)
+else
+    SPC= ${filename}
+endif
+
+KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
+HKSPNG= $(patsubst ${dira}/spc%.dat,${dirf}/hks%.png,$(SPC))
+
+##########################################
+# Movies
+##########################################
+
+kspmovie=${dirm}/aniksp.mp4
+hksmovie=${dirm}/anihks.mp4
+
+specmovies= ${kspmovie} ${vspmovie}
+
+moviefile=${specmovies}
+
+##########################################
+# Final spectrum
+##########################################
+
+specfile=k-E_k.png
+
+##########################################
+# Time evolution
+##########################################
+
+timefile=t-E.png
+
+##########################################
+# Proceadures
+##########################################
+
+all: ${moviefile} ${specfile} ${timefile}
+
+.PHONY: all clean allclean
+
+##########################################
+# Time evolution
+##########################################
+${timefile}: TimeEvolution.plt t-prof.dat
+	gnuplot TimeEvolution.plt
+
+t-prof.dat: MakeTimeseq.sh ${TOT}
+	./MakeTimeseq.sh
+#################
+# ffmpeg
+#################
+
+movie: ${moviefile}
+
+${kspmovie}: MakeMovie.sh ${KSPPNG}
+	./MakeMovie.sh ksp
+
+${hksmovie}: MakeMovie.sh ${HKSPNG}
+
+
+#################
+# gnuplot
+#################
+
+########################
+# spectrum
+########################
+
+spectrum: ${specfile}
+
+${specfile}: spectrum-fin.plt
+	gnuplot spectrum-fin.plt
+
+specs: ${KSPPNG} ${HSKPNG} 
+
+${KSPPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spc spectrum.plt
+
+${HSKPNG}: spectrum.plt MakeSnap.sh ${SPC}
+	./MakeSnap.sh spc spectrum.plt
+
+#################
+# clean up
+#################
+allclean:
+	rm -fr ${dirm} ${dirf} ${dira}
