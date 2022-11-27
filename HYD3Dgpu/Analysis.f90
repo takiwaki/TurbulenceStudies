@@ -48,7 +48,7 @@ program data_analysis
      close(unitcon)
   endif
 
-  FILENUMBER: do incr  = fbeg,fend
+  FILENUMBER: do incr  = fbeg,fend,10
      write(6,*) "file number",incr
      call ReadData
      call Vorticity
@@ -190,11 +190,10 @@ subroutine Fourier
   integer,parameter:: nk=128
   integer,parameter:: nvar=2
   real(8),dimension(:,:,:,:),allocatable:: X3D
-  real(8),dimension(nvar):: X
   real(8)                :: Xtotloc
   real(8),dimension(nvar):: Xtot
   real(8),dimension(nk,nk,nk,nvar):: Xhat3DC,Xhat3DS
-  real(8)                :: Xhat3DCloc,Xhat3DSloc
+  real(8)                         :: Xhat3DCloc,Xhat3DSloc
   real(8),dimension(nk):: kx,ky,kz
   real(8),dimension(nk,nvar):: Xhat1D
   real(8):: kr
@@ -271,7 +270,7 @@ subroutine Fourier
 
 !$acc kernels
 !$acc loop collapse(4) independent private(Xhat3DCloc)
-  do n=1,nvar
+  nloop: do n=1,nvar
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk 
@@ -292,7 +291,8 @@ subroutine Fourier
   enddo
   enddo
   enddo
-  enddo
+
+  enddo nloop
 !$acc end kernels
 !$acc update host (Xhat3DC)
 
@@ -349,7 +349,7 @@ subroutine Fourier
   write(filename,'(a3,i5.5,a4)')"tot",incr,".dat"
   filename = trim(dirname)//filename
   open(unittot,file=filename,status='replace',form='formatted')
-  write(unitspc,'(6(1x,E12.3))') time,Xtot(1),Xtot(2),Xtot(3),Xtot(4)
+  write(unittot,'(6(1x,E12.3))') time,Xtot(1),Xtot(2)
   close(unittot)
 
   return
