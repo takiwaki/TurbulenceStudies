@@ -64,7 +64,7 @@ set ylabel "Enstrophy"
 
 outputfile="k-E_kV_k.png"
 if(pngflag==1)set output outputfile
-set ylabel "Kinetic energy, Enstrophy [a.u.]"
+set ylabel "Spectrum [a.u.]"
 
 set log 
 set format y "10^{%L}"

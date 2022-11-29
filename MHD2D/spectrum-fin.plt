@@ -107,7 +107,7 @@ outputfile="k-E_kC_kM_k.png"
 if(pngflag==1)set output outputfile
 #set ylabel "Kinetic energy, Cross helicity, Magnetic potential [a.u.]"
 
-unset ylabel
+set ylabel "Spectrum [a.u.]"
 
 set log 
 set format y "10^{%L}"
