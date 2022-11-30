@@ -1,9 +1,13 @@
+##########################################
+# Makefile for Turbulence Studies
+##########################################
+
 dird := bindata
 
 exe=Simulation.x
 ana=Analysis.x
 
-all: ${exe}
+all: ${exe} ${ana} 
 
 .PHONY: all clean allclean
 
