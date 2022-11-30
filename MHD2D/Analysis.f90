@@ -16,7 +16,6 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: mptpo ! magnetic potential
     real(8),dimension(:,:,:),allocatable:: hcr ! cross helicity
     real(8):: dx,dy
-    real(8):: Etot,Vtot,Mtot,Ctot
 end module fieldmod
 
 program data_analysis
@@ -44,7 +43,6 @@ program data_analysis
      call Probability
   enddo FILENUMBER
 
-  stop
 end program data_analysis
 
 subroutine ReadData
@@ -68,11 +66,12 @@ subroutine ReadData
   in=izone+2*igs
   jn=jzone+2*jgs
   kn=1
-
   is=1+igs
   js=1+jgs
+  ks=1
   ie=in-igs
   je=jn-jgs
+  ke=1
 
   if(.not. is_inited)then
      allocate( x1b(in),x1a(in))
@@ -132,7 +131,7 @@ subroutine Vorticity
      is_inited = .true.
   endif
 
-  k=1
+  k=ks
   do j=js,je
   do i=is,ie
      vor(i,j,k)= (v2(i  ,j,k)-v2(i-1,j,k))/dx*0.5 &
@@ -174,8 +173,8 @@ subroutine Potential
   implicit none
   integer::i,j,k
   integer::iter
-  integer,parameter::itermax=1000
-  real(8),parameter::eps=1.0d-8
+  integer,parameter::itermax=100
+  real(8),parameter::eps=3.0d-2
 
   character(20),parameter::dirname="output/"
   character(40)::filename
@@ -200,18 +199,20 @@ subroutine Potential
 
   mpt(:,:,:)= 0.0d0
 
-  k=1
-  do j=js,je
-  do i=is+1,ie
-     mpt(i,j,k) = mpt(i-1,j,k)  - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
+  k=ks
+  do j=js+1,je
+  do i=is  ,ie
+!     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
   enddo
   enddo
 
-  do j=js+1,je
-  do i=is  ,ie
-     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
+  do j=js,je
+  do i=is+1,ie
+     write(6,*)(b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
+     mpt(i,j,k) = mpt(i-1,j,k) - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
   enddo
   enddo
+
 
   a1=1.0d0/dx**2
   a2=1.0d0/dy**2
@@ -225,6 +226,16 @@ subroutine Potential
        p(i,j,k) = r(i,j,k)
      phi(i,j,k) = 0.0d0
   enddo; enddo
+
+  do j=js,je
+     p(is-1,j,k) = p(ie,j,k)
+     p(ie+1,j,k) = p(is,j,k)
+  enddo
+
+  do i=is,ie
+     p(i,js-1,k) = p(i,je,k)
+     p(i,je+1,k) = p(i,js,k)    
+  enddo
 
   itloop: do iter=1,itermax
 
@@ -253,6 +264,7 @@ subroutine Potential
   do j=js,je; do i=is,ie
      tmp3= tmp3 + rp(i,j,k)**2      
   enddo; enddo
+!  write(6,*) tmp3
   if(tmp3 .lt. eps) then
      write(6,*) iter,eps
      exit itloop
@@ -271,13 +283,12 @@ subroutine Potential
   do i=is,ie
      p(i,js-1,k) = p(i,je,k)
      p(i,je+1,k) = p(i,js,k)    
-  enddo      
+  enddo
   enddo itloop
 
   do j=js,je; do i=is,ie
      mptpo(i,j,k) = phi(i,j,k)
   enddo; enddo
-
   return
 end subroutine Potential
 
