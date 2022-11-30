@@ -19,7 +19,7 @@ set style line 91 lt 1 lw 2 lc rgb "black" #
 set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
-if (exist("ifnum")==0 ) ifnum=581
+if (exist("ifnum")==0 ) ifnum=23
 input= sprintf("output/spc%05d.dat",ifnum)
 
 ##########################################

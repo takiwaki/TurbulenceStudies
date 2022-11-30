@@ -25,6 +25,7 @@ FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran
 # directory
 ######################
 
+dird := bindata
 dira := output
 dirf := figures
 dirm := movies
@@ -54,7 +55,7 @@ fileexistsS = $(shell ls | grep ${filenameS})
 ifeq (${fileexistsS}, ${filenameS})
     SPC= $(shell ls ${dira}/spc*.dat)
 else
-    SPC= ${filename}
+    SPC= ${filenameS}
 endif
 
 KSPPNG= $(patsubst ${dira}/spc%.dat,${dirf}/ksp%.png,$(SPC))
@@ -121,6 +122,8 @@ t-prof.dat: MakeTimeseq.sh ${TOT}
 
 movie: ${moviefile}
 
+# 4 kinds of 2D cross section
+
 ${vormovie}: MakeMovie.sh ${VORPNG}
 	./MakeMovie.sh vor
 
@@ -133,11 +136,22 @@ ${jcdmovie}: MakeMovie.sh ${JCDPNG}
 ${magmovie}: MakeMovie.sh ${MAGPNG}
 	./MakeMovie.sh mag
 
+# 5 kinds of spectrum
+
 ${kspmovie}: MakeMovie.sh ${KSPPNG}
 	./MakeMovie.sh ksp
 
 ${hksmovie}: MakeMovie.sh ${HKSPNG}
+	     ./MakeMovie.sh hks
 
+${hcrmovie}: MakeMovie.sh ${HCRPNG}
+	     ./MakeMovie.sh hcr
+
+${hmmmovie}: MakeMovie.sh ${MPTPNG}
+	     ./MakeMovie.sh hmm
+
+${mspmovie}: MakeMovie.sh ${MSPPNG}
+	     ./MakeMovie.sh msp
 #################
 # gnuplot
 #################
