@@ -1,5 +1,10 @@
 #!/bin/bash
 
+dir=figures
+if [ ! -d ${dir} ]; then
+    mkdir ${dir}
+fi
+
 index=$1
 echo "from "$index
 gscript=$2
@@ -18,3 +23,5 @@ echo $lstnum
 for n in $(seq ${fstnum} ${lstnum}); do
     gnuplot -e ifnum=$n $gscript
 done
+
+#!/bin/bash

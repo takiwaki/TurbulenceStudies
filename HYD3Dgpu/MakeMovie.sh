@@ -12,6 +12,10 @@ fi
 
 echo $prename
 
+if [ ! -d ${dirm} ]; then
+    mkdir ${dirm}
+fi
+
 # first file
 fstfile=`ls -1 ${dirf}/${prename}*.png  2>/dev/null | head -1`
 echo $fstfile
@@ -23,4 +27,7 @@ ffmpeg -y -r 10  -start_number ${fstnum} -i ${dirf}/${prename}%5d.png -vcodec li
 
 exit
 
+
+
+#!/bin/bash
 

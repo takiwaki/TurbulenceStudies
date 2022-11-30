@@ -71,7 +71,7 @@ set ylabel "Kinematic helicity"
 set label 1 time at screen 0.65, screen 0.845
 
 plot NaN notitle \
-, input  u 1:3  notitle w l ls 1  \
+, input  u 1:(abs($3))  notitle w l ls 1  \
 #, (2e3)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
 unset label 1
