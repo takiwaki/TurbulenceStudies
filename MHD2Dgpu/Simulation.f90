@@ -206,10 +206,10 @@ end module eosmod
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b1(i,j,k) =  b0*(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         b2(i,j,k) = -b0*(mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
+         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j)) !x2-derivative
+         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i)) !x1-derivative
+         b1(i,j,k) =  b0*(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j)) !x2-derivative
+         b2(i,j,k) = -b0*(mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i)) !x1-derivative
           p(i,j,k) =  p0
          v3(i,j,k) = 0.0d0
          b3(i,j,k) = 0.0d0
