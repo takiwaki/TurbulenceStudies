@@ -12,8 +12,9 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: b1,b2,b3,bp
     real(8),dimension(:,:,:),allocatable:: vor1,vor2,vor3
     real(8),dimension(:,:,:),allocatable:: jcd1,jcd2,jcd3
+    real(8),dimension(:,:,:),allocatable:: mpt1,mpt2,mpt3
     real(8),dimension(:,:,:),allocatable:: kin,hk
-    real(8),dimension(:,:,:),allocatable:: mag,hmm,hcr
+    real(8),dimension(:,:,:),allocatable:: mag,hm,hmm,hcr
     real(8):: dx,dy,dz
     
 !$acc declare create(incr)
@@ -32,8 +33,9 @@ module fieldmod
 !$acc declare create(b1,b2,b3,bp)
 !$acc declare create(vor1,vor2,vor3)
 !$acc declare create(jcd1,jcd2,jcd3)
+!$acc declare create(mpt1,mpt2,mpt3)
 !$acc declare create(kin,hk)
-!$acc declare create(mag,hmm,hcr)
+!$acc declare create(mag,hmm,hm,hcr)
 
 !$acc declare create(dx,dy,dz)
 
@@ -58,6 +60,7 @@ program data_analysis
      write(6,*) "file number",incr
      call ReadData
      call Vorticity
+     call Potential
      call Fourier
   enddo FILENUMBER
 
@@ -235,6 +238,217 @@ subroutine Vorticity
   return
 end subroutine Vorticity
 
+module potmod
+  implicit none
+  real(8),dimension(:,:,:),allocatable:: p,rp,r,Ap,phi
+  real(8)::a1,a2,a3,a4
+  real(8)::tmp1,tmp2,tmp3
+  real(8)::alpha,beta
+!$acc declare create(p,rp,r,Ap,phi)
+!$acc declare create(a1,a2,a3,a4)
+!$acc declare create(tmp1,tmp2,tmp3)
+!$acc declare create(alpha,beta)
+end module potmod
+
+subroutine Potential
+  use fieldmod, pressure => p
+  use potmod
+  implicit none
+  integer::i,j,k,n
+  integer:: iter,itermax
+  integer,parameter:: itermax=100
+  logical,save:: is_inited
+  data is_inited / .false. /
+
+  if(.not. is_inited)then
+     allocate(  p(in,jn,kn))
+     allocate( rp(in,jn,kn))
+     allocate(  r(in,jn,kn))
+     allocate( Ap(in,jn,kn))
+     allocate(phi(in,jn,kn))
+!$acc update device (p,rp,r,Ap,phi)
+     
+     allocate( mpt1(in,jn,kn))
+     allocate( mpt2(in,jn,kn))
+     allocate( mpt3(in,jn,kn))
+!$acc update device (mpt1,mpt2,mpt3)
+     allocate(   hm(in,jn,kn))
+!$acc update device (hm)
+     is_inited = .true.
+  endif
+
+  
+  a1=1.0d0/dx**2
+  a2=1.0d0/dy**2
+  a3=1.0d0/dz**2
+  a4=2.0d0*(a1+a2+a3)
+!$acc update device (a1,a2,a3,a4)
+  
+  nloop: do n=1,3
+!$acc kernels
+     select case(n)
+     case(1)
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           r(i,j,k) = jcd1(i,j,k)
+        enddo; enddo; enddo
+     case(2)
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+        r(i,j,k) = jcd2(i,j,k)
+        enddo; enddo; enddo    
+     case(3)
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+        r(i,j,k) = jcd3(i,j,k)
+        enddo; enddo; enddo   
+     end select
+!$acc end kernels
+     
+!$acc kernels
+!$acc loop collapse(3) independent
+     do k=ks,ke;  do j=js,je; do i=is,ie
+        p(i,j,k) = r(i,j,k)
+     enddo; enddo; enddo
+!$acc end kernels
+     
+!$acc kernels
+     !==========================
+     ! boundary condition
+     !==========================
+!$acc loop collapse(2) independent
+     do k=ks,ke; do j=js,je
+        p(is-1,j,k) = p(ie,j,k)
+        p(ie+1,j,k) = p(is,j,k)    
+     enddo;  enddo
+
+!$acc loop collapse(2) independent
+     do k=ks,ke; do i=is,ie
+        p(i,js-1,k) = p(i,je,k)
+        p(i,je+1,k) = p(i,js,k)    
+     enddo;  enddo
+     
+!$acc loop collapse(2) independent
+     do j=js,je; do i=is,ie
+        p(i,j,ks-1) = p(i,j,ke)
+        p(i,j,ke+1) = p(i,j,ks)    
+     enddo;  enddo
+!$acc end kernels
+
+     itloop: do iter=1,itermax
+!$acc kernels           
+!$acc loop collapse(3) independent
+        do k=ks,ke
+        do j=js,je
+        do i=is,ie
+           Ap(i,j,k) =  a1*(p(i+1,j,k)+p(i-1,j,k)) &
+                     & +a2*(p(i,j+1,k)+p(i,j-1,k)) &
+                     & +a3*(p(i,j,k+1)+p(i,j,k-1)) &
+                     & -a4*(p(i,j,k+1))
+        enddo
+        enddo
+        enddo
+!$acc end kernels
+
+!$acc kernels       
+        tmp1=0.0d0
+!$acc loop collapse(3) reduction(+:tmp1)
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           tmp1= tmp1 +  r(i,j,k)**2
+        enddo; enddo; enddo
+        
+        tmp2=0.0d0
+!$acc loop collapse(3) reduction(+:tmp1)
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           tmp2= tmp2 + Ap(i,j,k)*p(i,j,k)
+        enddo; enddo; enddo
+!$acc end kernels
+        
+!$acc kernels
+        alpha= tmp1/tmp2
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           phi(i,j,k) = phi(i,j,k) +alpha * p(i,j,k)
+            rp(i,j,k) =   r(i,j,k) +alpha *Ap(i,j,k)
+        enddo; enddo; enddo
+!$acc end kernels
+        
+!$acc kernels
+        tmp3 =0.0d0
+!$acc loop collapse(3) reduction(+:tmp3)
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           tmp3= tmp3 + rp(i,j,k)**2      
+        enddo; enddo; enddo
+!$acc end kernels
+        
+!$acc kernels
+        beta =  tmp3/tmp1
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+            p(i,j,k) = rp(i,j,k) +beta * p(i,j,k)
+            r(i,j,k) = rp(i,j,k)
+        enddo; enddo; enddo
+!$acc end kernels
+
+!$acc kernels
+!$acc loop collapse(2) independent
+        do k=ks,ke; do j=js,je
+          p(is-1,j,k) = p(ie,j,k)
+          p(ie+1,j,k) = p(is,j,k)    
+        enddo; enddo
+
+!$acc loop collapse(2) independent
+        do k=ks,ke; do i=is,ie
+          p(i,js-1,k) = p(i,je,k)
+          p(i,je+1,k) = p(i,js,k)    
+        enddo; enddo
+     
+!$acc loop collapse(2) independent
+        do j=js,je; do i=is,ie
+          p(i,j,ks-1) = p(i,j,ke)
+          p(i,j,ke+1) = p(i,j,ks)    
+        enddo;  enddo
+!$acc end kernels
+     
+     enddo itloop
+     
+!$acc kernels
+     select case(n)
+     case(1)
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           mpt1(i,j,k) = phi(i,j,k)
+        enddo; enddo; enddo
+     case(2)
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           mpt2(i,j,k) = phi(i,j,k)
+        enddo; enddo; enddo
+     case(3)
+!$acc loop collapse(3) independent
+        do k=ks,ke;  do j=js,je; do i=is,ie
+           mpt3(i,j,k) = phi(i,j,k)
+        enddo; enddo; enddo
+     end select
+!$acc end kernels
+  enddo nloop
+
+!$acc kernels
+!$acc loop collapse(3) independent
+  do k=ks,ke
+  do j=js,je
+  do i=is,ie
+       hm(i,j,k)=  b1(i,j,k)*mpt1(i,j,k) &
+                & +b2(i,j,k)*mpt2(i,j,k) &
+                & +b3(i,j,k)*mpt3(i,j,k)
+  enddo
+  enddo
+  enddo
+!$acc end kernels
+
+  return
+end subroutine Potential
+
 module spctrmod
 implicit none
   real(8),dimension(:,:,:,:),allocatable:: X3D
@@ -288,7 +502,7 @@ subroutine Fourier
   do i=is,ie
      X3D(i,j,k,1) = kin(i,j,k)
      X3D(i,j,k,2) =  hk(i,j,k)
-     X3D(i,j,k,3) = hmm(i,j,k)
+     X3D(i,j,k,3) =  hm(i,j,k)
      X3D(i,j,k,4) = Hcr(i,j,k)
      X3D(i,j,k,5) = mag(i,j,k)
   enddo
