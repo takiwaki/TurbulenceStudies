@@ -131,7 +131,7 @@ end module eosmod
       implicit none
       integer::i,j,k
       real(8)::pi
-      real(8),parameter::k_ini=10.0d0
+      real(8),parameter::k_ini=2.0d0
 
       real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
       real(8),dimension(in,jn,kn)::mpsi1b,mpsi2b
@@ -185,10 +185,10 @@ end module eosmod
       do k=ks,ke
       do j=js,je
       do i=is,ie
-         v1(i,j,k) =  v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         v2(i,j,k) = -v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
-         b1(i,j,k) =  b0*(mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i))
-         b2(i,j,k) = -b0*(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j))
+         v1(i,j,k) =  v0*(vpsi1b(i,j+1,k)-vpsi1b(i,j,k))/(x2a(j+1)-x2a(j)) ! x2-derivative
+         v2(i,j,k) = -v0*(vpsi2b(i+1,j,k)-vpsi2b(i,j,k))/(x1a(i+1)-x1a(i)) ! x1-derivative
+         b1(i,j,k) =  b0*(mpsi1b(i,j+1,k)-mpsi1b(i,j,k))/(x2a(j+1)-x2a(j)) ! x2-derivative
+         b2(i,j,k) = -b0*(mpsi2b(i+1,j,k)-mpsi2b(i,j,k))/(x1a(i+1)-x1a(i)) ! x1-derivative
           p(i,j,k) = p0
          v3(i,j,k) = 0.0d0
          b3(i,j,k) = 0.0d0
@@ -1608,10 +1608,10 @@ end module eosmod
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,3) = v2(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,4) = v3(is-gs:ie+gs,js-gs:je+gs,ks)
       hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = b1(is-gs:ie+gs,js-gs:je+gs,ks)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = b2(is-gs:ie+gs,js-gs:je+gs,ks)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = b3(is-gs:ie+gs,js-gs:je+gs,ks)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) = bp(is-gs:ie+gs,js-gs:je+gs,ks)
-      hydout(is-gs:ie+gs,js-gs:je+gs,ks,5) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,6) = b2(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,7) = b3(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,8) = bp(is-gs:ie+gs,js-gs:je+gs,ks)
+      hydout(is-gs:ie+gs,js-gs:je+gs,ks,9) =  p(is-gs:ie+gs,js-gs:je+gs,ks)
 
       write(filename,'(a3,i5.5,a4)')"bin",nout,".dat"
       filename = trim(dirname)//filename
