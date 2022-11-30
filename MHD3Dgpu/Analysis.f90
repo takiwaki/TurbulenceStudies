@@ -135,6 +135,11 @@ subroutine ReadData
   dy = x2b(2)-x2b(1)
   dz = x3b(2)-x3b(1)
 
+
+!$acc update device (in,jn,kn)
+!$acc update device (is,js,ks)
+!$acc update device (ie,je,ke)
+  
 !$acc update device (x1a,x1b)
 !$acc update device (x2a,x2b)
 !$acc update device (x3a,x3b)
@@ -232,9 +237,9 @@ subroutine Vorticity
 !$acc end kernels
 
   
-!$acc update host (kin,hk)
-!$acc update host (mag,hmm,hcr)
-  write(6,*)"debug1",kin(is,js,ks),hk(is,js,ks),mag(is,js,ks),hmm(is,js,ks),hcr(is,js,ks)
+!!$acc update host (kin,hk)
+!!$acc update host (mag,hmm,hcr)
+!  write(6,*)"debug1",kin(is,js,ks),hk(is,js,ks),mag(is,js,ks),hmm(is,js,ks),hcr(is,js,ks)
   return
 end subroutine Vorticity
 
@@ -255,7 +260,7 @@ subroutine Potential
   use potmod
   implicit none
   integer::i,j,k,n
-  integer:: iter,itermax
+  integer:: iter
   integer,parameter:: itermax=100
   logical,save:: is_inited
   data is_inited / .false. /
@@ -277,6 +282,8 @@ subroutine Potential
      is_inited = .true.
   endif
 
+  
+  write(6,*)"debug0"
   
   a1=1.0d0/dx**2
   a2=1.0d0/dy**2
@@ -304,6 +311,8 @@ subroutine Potential
         enddo; enddo; enddo   
      end select
 !$acc end kernels
+
+     write(6,*)"debug1"
      
 !$acc kernels
 !$acc loop collapse(3) independent
@@ -335,6 +344,7 @@ subroutine Potential
      enddo;  enddo
 !$acc end kernels
 
+     write(6,*)"debug2"
      itloop: do iter=1,itermax
 !$acc kernels           
 !$acc loop collapse(3) independent
@@ -412,6 +422,7 @@ subroutine Potential
      
      enddo itloop
      
+     write(6,*)"debug10"
 !$acc kernels
      select case(n)
      case(1)
@@ -431,6 +442,7 @@ subroutine Potential
         enddo; enddo; enddo
      end select
 !$acc end kernels
+     write(6,*)"debug11"
   enddo nloop
 
 !$acc kernels
@@ -446,6 +458,7 @@ subroutine Potential
   enddo
 !$acc end kernels
 
+     write(6,*)"debug12"
   return
 end subroutine Potential
 
