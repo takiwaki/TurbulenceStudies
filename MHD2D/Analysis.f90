@@ -13,6 +13,7 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: vor, kin ! vorticity
     real(8),dimension(:,:,:),allocatable:: jcd, mag ! current density
     real(8),dimension(:,:,:),allocatable:: mpt ! magnetic potential
+    real(8),dimension(:,:,:),allocatable:: mptpo ! magnetic potential
     real(8),dimension(:,:,:),allocatable:: hcr ! cross helicity
     real(8):: dx,dy
     real(8):: Etot,Vtot,Mtot,Ctot
@@ -38,7 +39,7 @@ program data_analysis
      call ReadData
      call Vorticity
      call Potential
-     call CrossHelicity
+     call Snap2D
      call Fourier
      call Probability
   enddo FILENUMBER
@@ -127,6 +128,7 @@ subroutine Vorticity
      allocate( jcd(in,jn,kn))
      allocate( kin(in,jn,kn))
      allocate( mag(in,jn,kn))
+     allocate( Hcr(in,jn,kn))
      is_inited = .true.
   endif
 
@@ -149,32 +151,31 @@ subroutine Vorticity
                & +b1(i,j,k)*b1(i,j,k) &
                & +b2(i,j,k)*b2(i,j,k) &
                & )
+     Hcr(i,j,k) =     v1(i,j,k) * b1(i,j,k) &
+                &  +  v2(i,j,k) * b2(i,j,k) &
+                &  +  v3(i,j,k) * b3(i,j,k)
   enddo
   enddo
-
-  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitvor,file=filename,status='replace',form='formatted')
-
-  write(unitvor,'(1a,4(1x,E12.3))') "#",time
-  write(unitvor,'(1a,6(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:jcd_z ","5:E_kin ","6:E_mag "
-  do j=js,je
-  do i=is,ie
-     write(unitvor,'(6(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k),kin(i,j,k),mag(i,j,k)
-  enddo
-     write(unitvor,*)
-  enddo
-
-  close(unitvor)
-
 
   return
 end subroutine Vorticity
 
+module potmod
+  implicit none
+  real(8),dimension(:,:,:),allocatable:: p,rp,r,Ap,phi
+  real(8)::a1,a2,a3,a4
+  real(8)::tmp1,tmp2,tmp3
+  real(8)::alpha,beta
+end module potmod
+
 subroutine Potential
-  use fieldmod
+  use fieldmod, press=>p
+  use potmod
   implicit none
   integer::i,j,k
+  integer::iter
+  integer,parameter::itermax=1000
+  real(8),parameter::eps=1.0d-8
 
   character(20),parameter::dirname="output/"
   character(40)::filename
@@ -185,7 +186,14 @@ subroutine Potential
 
 
   if(.not. is_inited)then
+     allocate(  p(in,jn,kn))
+     allocate( rp(in,jn,kn))
+     allocate(  r(in,jn,kn))
+     allocate( Ap(in,jn,kn))
+     allocate(phi(in,jn,kn))
+
      allocate( mpt(in,jn,kn))
+     allocate( mptpo(in,jn,kn))
      is_inited = .true.
   endif
  
@@ -195,7 +203,7 @@ subroutine Potential
   k=1
   do j=js,je
   do i=is+1,ie
-     mpt(i,j,k) = mpt(i-1,j,k)  + (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
+     mpt(i,j,k) = mpt(i-1,j,k)  - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
   enddo
   enddo
 
@@ -205,41 +213,73 @@ subroutine Potential
   enddo
   enddo
 
+  a1=1.0d0/dx**2
+  a2=1.0d0/dy**2
+  a4=2.0d0*(a1+a2)
+
+  do j=js,je; do i=is,ie
+     r(i,j,k) = -jcd(i,j,k)
+  enddo; enddo
+
+  do j=js,je; do i=is,ie
+       p(i,j,k) = r(i,j,k)
+     phi(i,j,k) = 0.0d0
+  enddo; enddo
+
+  itloop: do iter=1,itermax
+
+  do j=js,je; do i=is,ie
+     Ap(i,j,k) =  a1*(p(i+1,j,k)+p(i-1,j,k)) &
+               & +a2*(p(i,j+1,k)+p(i,j-1,k)) &
+               & -a4*(p(i,j,k))
+  enddo; enddo
+
+  tmp1=0.0d0
+  do j=js,je; do i=is,ie
+     tmp1= tmp1 +  r(i,j,k)**2
+  enddo; enddo
+  tmp2=0.0d0
+  do j=js,je; do i=is,ie
+     tmp2= tmp2 +  Ap(i,j,k)*p(i,j,k)
+  enddo; enddo
+
+  alpha= tmp1/tmp2
+  do j=js,je; do i=is,ie
+     phi(i,j,k) = phi(i,j,k) +alpha * p(i,j,k)
+     rp(i,j,k) =    r(i,j,k) -alpha *Ap(i,j,k)
+  enddo; enddo
+
+  tmp3 =0.0d0
+  do j=js,je; do i=is,ie
+     tmp3= tmp3 + rp(i,j,k)**2      
+  enddo; enddo
+  if(tmp3 .lt. eps) then
+     write(6,*) iter,eps
+     exit itloop
+  endif
+  beta =  tmp3/tmp1
+  do j=js,je; do i=is,ie
+     p(i,j,k) = rp(i,j,k) +beta * p(i,j,k)
+     r(i,j,k) = rp(i,j,k)
+  enddo; enddo
+
+  do j=js,je
+     p(is-1,j,k) = p(ie,j,k)
+     p(ie+1,j,k) = p(is,j,k)
+  enddo
+
+  do i=is,ie
+     p(i,js-1,k) = p(i,je,k)
+     p(i,je+1,k) = p(i,js,k)    
+  enddo      
+  enddo itloop
+
+  do j=js,je; do i=is,ie
+     mptpo(i,j,k) = phi(i,j,k)
+  enddo; enddo
+
   return
 end subroutine Potential
-
-subroutine CrossHelicity
-  use fieldmod
-  implicit none
-  integer::i,j,k
-
-  character(20),parameter::dirname="output/"
-  character(40)::filename
-  integer,parameter::unitvor=231
-
-  logical,save:: is_inited
-  data is_inited / .false. /
-
-
-  if(.not. is_inited)then
-     allocate( Hcr(in,jn,kn))
-     is_inited = .true.
-  endif
- 
-
-  Hcr(:,:,:)= 0.0d0
-
-  k=1
-  do j=js,je
-  do i=is,ie
-     Hcr(i,j,k) =     v1(i,j,k) * b1(i,j,k) &
-                &  +  v2(i,j,k) * b2(i,j,k) &
-                &  +  v3(i,j,k) * b3(i,j,k)
-  enddo
-  enddo
-
-  return
-end subroutine CrossHelicity
 
 
 subroutine Fourier
@@ -401,3 +441,38 @@ subroutine Probability
 
   return
 end subroutine Probability
+
+subroutine Snap2D
+  use fieldmod
+  implicit none
+  integer::i,j,k
+
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer,parameter::unitvor=123
+
+  logical,save:: is_inited
+  data is_inited / .false. /
+
+  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
+  filename = trim(dirname)//filename
+  open(unitvor,file=filename,status='replace',form='formatted')
+  k=1
+  write(unitvor,*) "# ",time
+  write(unitvor,*) "# x y omega_z"
+  do j=js,je
+  do i=is,ie
+     write(unitvor,'(10(1x,E12.3))') x1b(i),x2b(j) &
+                                 & ,vor(i,j,k),jcd(i,j,k),kin(i,j,k),mag(i,j,k) &
+                                 & ,mpt(i,j,k),mptpo(i,j,k)
+
+  enddo
+     write(unitvor,*)
+  enddo
+
+  close(unitvor)
+
+
+  return
+end subroutine Snap2D
+ 
