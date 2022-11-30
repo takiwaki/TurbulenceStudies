@@ -202,13 +202,12 @@ subroutine Potential
   k=ks
   do j=js+1,je
   do i=is  ,ie
-!     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
+     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
   enddo
   enddo
 
   do j=js,je
   do i=is+1,ie
-     write(6,*)(b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
      mpt(i,j,k) = mpt(i-1,j,k) - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
   enddo
   enddo
