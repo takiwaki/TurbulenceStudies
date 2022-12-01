@@ -59,8 +59,10 @@ program data_analysis
   FILENUMBER: do incr  = fbeg,fend,10
      write(6,*) "file number count",incr
      call ReadData
+!     call GenerateProblem
      call Vorticity
      call Potential
+!     call Snap2D
      call Fourier
   enddo FILENUMBER
 
@@ -117,7 +119,7 @@ subroutine ReadData
 
   write(filename,'(a3,i5.5,a4)')"bin",incr,".dat"
   filename = trim(dirname)//filename
-  write(6,*) "open",filename
+  write(6,*) "open ",filename
   open(unitbin,file=filename,status='old',form='binary')
   read(unitbin)x1b(:),x1a(:)
   read(unitbin)x2b(:),x2a(:)
@@ -138,6 +140,7 @@ subroutine ReadData
   dy = x2b(2)-x2b(1)
   dz = x3b(2)-x3b(1)
 
+!  write(6,*) "dx",dx,dy,dz
 
 !$acc update device (in,jn,kn)
 !$acc update device (is,js,ks)
@@ -264,7 +267,7 @@ subroutine Potential
   integer::i,j,k,n
   integer:: iter
   integer,parameter:: itermax=1000
-  real(8),parameter::eps=1.0d-8
+  real(8),parameter::eps=1.0d-1
   logical,save:: is_inited
   data is_inited / .false. /
 
@@ -315,11 +318,13 @@ subroutine Potential
 !$acc kernels
 !$acc loop collapse(3) independent
      do k=ks,ke;  do j=js,je; do i=is,ie
-        p(i,j,k) = r(i,j,k)
+          p(i,j,k) = r(i,j,k)
         phi(i,j,k) = 0.0d0
      enddo; enddo; enddo
 !$acc end kernels
      
+     itloop: do iter=1,itermax
+
 !$acc kernels
      !==========================
      ! boundary condition
@@ -342,12 +347,7 @@ subroutine Potential
         p(i,j,ke+1) = p(i,j,ks)    
      enddo;  enddo
 !$acc end kernels
-
-     itloop: do iter=1,itermax
-        if(iter .eq. itermax) then
-           write(6,*) "iteration reaches max"
-        endif
-        
+   
 !$acc kernels           
 !$acc loop collapse(3) independent
         do k=ks,ke; do j=js,je; do i=is,ie
@@ -389,7 +389,7 @@ subroutine Potential
         enddo; enddo; enddo
 !$acc end kernels
         
-  tmp2=0.0d0
+  tmp3=0.0d0
 !$acc update device (tmp3)
 !$acc kernels
 !$acc loop collapse(3) reduction(+:tmp3)
@@ -404,36 +404,21 @@ subroutine Potential
            exit itloop
         endif
         
+        if(iter .eq. itermax) then
+           write(6,*) "iteration reaches max",itermax
+           write(6,*) "error=",tmp3
+        endif
   beta =  tmp3/tmp1
 !$acc update device (beta)
 !$acc kernels
 !$acc loop collapse(3) independent
         do k=ks,ke;  do j=js,je; do i=is,ie
-            p(i,j,k) = rp(i,j,k) +beta * p(i,j,k)
+            p(i,j,k) = rp(i,j,k) + beta * p(i,j,k)
             r(i,j,k) = rp(i,j,k)
         enddo; enddo; enddo
 !$acc end kernels
-
-!$acc kernels
-!$acc loop collapse(2) independent
-        do k=ks,ke; do j=js,je
-          p(is-1,j,k) = p(ie,j,k)
-          p(ie+1,j,k) = p(is,j,k)
-        enddo; enddo
-
-!$acc loop collapse(2) independent
-        do k=ks,ke; do i=is,ie
-          p(i,js-1,k) = p(i,je,k)
-          p(i,je+1,k) = p(i,js,k)    
-        enddo; enddo
-     
-!$acc loop collapse(2) independent
-        do j=js,je; do i=is,ie
-          p(i,j,ks-1) = p(i,j,ke)
-          p(i,j,ke+1) = p(i,j,ks)    
-        enddo;  enddo
-!$acc end kernels
-     
+!        write(6,*) tmp1,tmp2,tmp3,alpha,beta
+!        stop
      enddo itloop
      
 !$acc kernels
@@ -493,7 +478,6 @@ implicit none
 !$acc declare create(Xhat3DC,Xhat3DS,Xhat1D)
 !$acc declare create(pi)
 end module spctrmod
-
 subroutine Fourier
   use fieldmod
   use spctrmod
@@ -663,3 +647,156 @@ subroutine Fourier
   
   return
 end subroutine Fourier
+
+subroutine Snap2D
+  use fieldmod
+  implicit none
+  integer::i,j,k
+
+  character(20),parameter::dirname="./"
+  character(40)::filename
+  integer,parameter::unitvor=123
+
+  logical,save:: is_inited
+  data is_inited / .false. /
+  
+  write(filename,*)"test.dat"
+  filename = filename
+  write(6,*) filename
+  open(unitvor,file=filename,status='replace',form='formatted')
+  k=ks
+  write(unitvor,*) "# x y omega_z"
+  do j=js,je
+  do i=is,ie
+     write(unitvor,'(10(1x,E12.3))') x1b(i),x2b(j) &
+                                 & ,jcd3(i,j,k),mpt3(i,j,k)
+
+  enddo
+     write(unitvor,*)
+  enddo
+
+  close(unitvor)
+
+
+  return
+end subroutine Snap2D
+
+      subroutine GenerateProblem
+      use fieldmod
+      implicit none
+      integer::i,j,k
+      real(8)::pi
+      real(8)::Ahl,Bhl,Chl
+      real(8),parameter::k_ini=2.0d0
+
+      real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
+      real(8),dimension(in,jn,kn)::mpsi1b,mpsi2b
+      real(8):: psinorm
+
+      integer::seedsize
+      integer,allocatable:: seed(:)
+      real(8)::x
+
+      real(8),parameter:: b0 = 2.0d0
+      real(8),parameter:: x1max = 0.5d0, x2max = 0.5d0,x3max = 0.5d0
+      real(8),parameter:: x1min =-0.5d0, x2min =-0.5d0,x3min =-0.5d0
+
+      pi=acos(-1.0d0)
+
+      Ahl = 0.5d0
+      Bhl = 0.5d0
+      Chl = 0.5d0
+
+      do k=ks,ke
+      do j=js,je
+      do i=is,ie
+         b1(i,j,k) = b0*(  Ahl*sin(2.0d0*pi*(k_ini*x3b(k)/(x3max-x3min))) &
+   &                     + Chl*cos(2.0d0*pi*(k_ini*x2b(j)/(x2max-x2min))))
+         b2(i,j,k) = b0*(  Bhl*sin(2.0d0*pi*(k_ini*x1b(i)/(x1max-x1min))) &
+   &                     + Ahl*cos(2.0d0*pi*(k_ini*x3b(k)/(x3max-x3min))))
+         b3(i,j,k) = b0*(  Chl*sin(2.0d0*pi*(k_ini*x2b(j)/(x2max-x2min))) &
+   &                     + Bhl*cos(2.0d0*pi*(k_ini*x1b(i)/(x1max-x1min))))
+!         write(6,*)b1(i,j,k),b2(i,j,k),b3(i,j,k)
+      enddo
+      enddo
+      enddo
+
+      call BoundaryCondition
+
+      return
+      end subroutine GenerateProblem
+
+
+      subroutine BoundaryCondition
+      use fieldmod
+      implicit none
+      integer::i,j,k
+
+! x-boundary
+      do k=1,kn-1
+      do j=1,jn-1
+      do i=1,igs
+          b1(i,j,k) = b1(ie-igs+i,j,k)
+          b2(i,j,k) = b2(ie-igs+i,j,k)
+          b3(i,j,k) = b3(ie-igs+i,j,k)
+      enddo
+      enddo
+      enddo
+
+      
+      do k=1,kn-1
+      do j=1,jn-1
+      do i=1,igs
+          b1(ie+i,j,k) = b1(is+i-1,j,k)
+          b2(ie+i,j,k) = b2(is+i-1,j,k)
+          b3(ie+i,j,k) = b3(is+i-1,j,k)
+      enddo
+      enddo
+      enddo
+
+! y-boundary   
+      do k=1,kn-1
+      do i=1,in-1
+      do j=1,jgs
+          b1(i,j,k) = b1(i,je-jgs+j,k)
+          b2(i,j,k) = b2(i,je-jgs+j,k)
+          b3(i,j,k) = b3(i,je-jgs+j,k)
+      enddo
+      enddo
+      enddo
+
+      
+      do k=1,kn-1
+      do i=1,in-1
+      do j=1,jgs
+          b1(i,je+j,k) = b1(i,js+j-1,k)
+          b2(i,je+j,k) = b2(i,js+j-1,k)
+          b3(i,je+j,k) = b3(i,js+j-1,k)
+      enddo
+      enddo
+      enddo
+
+! z-boundary
+      do j=1,jn-1
+      do i=1,in-1
+      do k=1,kgs
+          b1(i,j,k) = b1(i,j,ke-kgs+k)
+          b2(i,j,k) = b2(i,j,ke-kgs+k)
+          b3(i,j,k) = b3(i,j,ke-kgs+k)
+      enddo
+      enddo
+      enddo
+
+      
+      do j=1,jn-1
+      do i=1,in-1
+      do k=1,kgs
+          b1(i,j,ke+k) = b1(i,j,ks+k-1)
+          b2(i,j,ke+k) = b2(i,j,ks+k-1)
+          b3(i,j,ke+k) = b3(i,j,ks+k-1)
+      enddo
+      enddo
+      enddo
+
+      return
+      end subroutine BoundaryCondition
