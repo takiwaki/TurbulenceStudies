@@ -57,7 +57,7 @@ program data_analysis
   endif
 
   FILENUMBER: do incr  = fbeg,fend,10
-     write(6,*) "file number",incr
+     write(6,*) "file number count",incr
      call ReadData
      call Vorticity
      call Potential
@@ -86,10 +86,11 @@ subroutine ReadData
   read(unitinp,*) dummy,jzone,jgs
   read(unitinp,*) dummy,kzone,kgs
   close(unitinp)
+  
   in=izone+2*igs
   jn=jzone+2*jgs
   kn=kzone+2*kgs
-
+  write(6,*) "data size",in,jn,kn
   is=1+igs
   js=1+jgs
   ks=1+kgs
@@ -116,6 +117,7 @@ subroutine ReadData
 
   write(filename,'(a3,i5.5,a4)')"bin",incr,".dat"
   filename = trim(dirname)//filename
+  write(6,*) "open",filename
   open(unitbin,file=filename,status='old',form='binary')
   read(unitbin)x1b(:),x1a(:)
   read(unitbin)x2b(:),x2a(:)
@@ -131,6 +133,7 @@ subroutine ReadData
   read(unitbin)  p(:,:,:)
   close(unitbin)
   
+  write(6,*) "data read end"
   dx = x1b(2)-x1b(1)
   dy = x2b(2)-x2b(1)
   dz = x3b(2)-x3b(1)
@@ -236,7 +239,6 @@ subroutine Vorticity
   enddo
 !$acc end kernels
 
-  
 !!$acc update host (kin,hk)
 !!$acc update host (mag,hmm,hcr)
 !  write(6,*)"debug1",kin(is,js,ks),hk(is,js,ks),mag(is,js,ks),hmm(is,js,ks),hcr(is,js,ks)
@@ -246,9 +248,9 @@ end subroutine Vorticity
 module potmod
   implicit none
   real(8),dimension(:,:,:),allocatable:: p,rp,r,Ap,phi
-  real(8)::a1,a2,a3,a4
-  real(8)::tmp1,tmp2,tmp3
-  real(8)::alpha,beta
+  real(8):: a1,a2,a3,a4
+  real(8):: tmp1,tmp2,tmp3
+  real(8):: alpha,beta
 !$acc declare create(p,rp,r,Ap,phi)
 !$acc declare create(a1,a2,a3,a4)
 !$acc declare create(tmp1,tmp2,tmp3)
@@ -261,7 +263,8 @@ subroutine Potential
   implicit none
   integer::i,j,k,n
   integer:: iter
-  integer,parameter:: itermax=100
+  integer,parameter:: itermax=1000
+  real(8),parameter::eps=1.0d-8
   logical,save:: is_inited
   data is_inited / .false. /
 
@@ -281,9 +284,6 @@ subroutine Potential
 !$acc update device (hm)
      is_inited = .true.
   endif
-
-  
-  write(6,*)"debug0"
   
   a1=1.0d0/dx**2
   a2=1.0d0/dy**2
@@ -297,27 +297,26 @@ subroutine Potential
      case(1)
 !$acc loop collapse(3) independent
         do k=ks,ke;  do j=js,je; do i=is,ie
-           r(i,j,k) = jcd1(i,j,k)
+           r(i,j,k) = -jcd1(i,j,k)
         enddo; enddo; enddo
      case(2)
 !$acc loop collapse(3) independent
         do k=ks,ke;  do j=js,je; do i=is,ie
-        r(i,j,k) = jcd2(i,j,k)
+           r(i,j,k) = -jcd2(i,j,k)
         enddo; enddo; enddo    
      case(3)
 !$acc loop collapse(3) independent
         do k=ks,ke;  do j=js,je; do i=is,ie
-        r(i,j,k) = jcd3(i,j,k)
+           r(i,j,k) = -jcd3(i,j,k)
         enddo; enddo; enddo   
      end select
 !$acc end kernels
-
-     write(6,*)"debug1"
      
 !$acc kernels
 !$acc loop collapse(3) independent
      do k=ks,ke;  do j=js,je; do i=is,ie
         p(i,j,k) = r(i,j,k)
+        phi(i,j,k) = 0.0d0
      enddo; enddo; enddo
 !$acc end kernels
      
@@ -344,55 +343,70 @@ subroutine Potential
      enddo;  enddo
 !$acc end kernels
 
-     write(6,*)"debug2"
      itloop: do iter=1,itermax
+        if(iter .eq. itermax) then
+           write(6,*) "iteration reaches max"
+        endif
+        
 !$acc kernels           
 !$acc loop collapse(3) independent
-        do k=ks,ke
-        do j=js,je
-        do i=is,ie
+        do k=ks,ke; do j=js,je; do i=is,ie
            Ap(i,j,k) =  a1*(p(i+1,j,k)+p(i-1,j,k)) &
                      & +a2*(p(i,j+1,k)+p(i,j-1,k)) &
                      & +a3*(p(i,j,k+1)+p(i,j,k-1)) &
-                     & -a4*(p(i,j,k+1))
-        enddo
-        enddo
-        enddo
+                     & -a4*(p(i,j,k))
+        enddo; enddo;  enddo
 !$acc end kernels
 
-!$acc kernels       
-        tmp1=0.0d0
+  tmp1=0.0d0
+!$acc update device (tmp1)
+!$acc kernels
 !$acc loop collapse(3) reduction(+:tmp1)
         do k=ks,ke;  do j=js,je; do i=is,ie
            tmp1= tmp1 +  r(i,j,k)**2
         enddo; enddo; enddo
+!$acc end kernels
+!$acc update host (tmp1)
         
-        tmp2=0.0d0
-!$acc loop collapse(3) reduction(+:tmp1)
+  tmp2=0.0d0
+!$acc update device (tmp2)
+!$acc kernels
+!$acc loop collapse(3) reduction(+:tmp2)
         do k=ks,ke;  do j=js,je; do i=is,ie
            tmp2= tmp2 + Ap(i,j,k)*p(i,j,k)
         enddo; enddo; enddo
 !$acc end kernels
+!$acc update host (tmp2)
+
+  alpha= tmp1/tmp2
+!$acc update device (alpha)
         
 !$acc kernels
-        alpha= tmp1/tmp2
 !$acc loop collapse(3) independent
         do k=ks,ke;  do j=js,je; do i=is,ie
-           phi(i,j,k) = phi(i,j,k) +alpha * p(i,j,k)
-            rp(i,j,k) =   r(i,j,k) +alpha *Ap(i,j,k)
+           phi(i,j,k) = phi(i,j,k) + alpha * p(i,j,k)
+            rp(i,j,k) =   r(i,j,k) - alpha *Ap(i,j,k)
         enddo; enddo; enddo
 !$acc end kernels
         
+  tmp2=0.0d0
+!$acc update device (tmp3)
 !$acc kernels
-        tmp3 =0.0d0
 !$acc loop collapse(3) reduction(+:tmp3)
         do k=ks,ke;  do j=js,je; do i=is,ie
-           tmp3= tmp3 + rp(i,j,k)**2      
+           tmp3 = tmp3 + rp(i,j,k)**2      
         enddo; enddo; enddo
 !$acc end kernels
+!$acc update host (tmp3)
         
+        if(tmp3 .lt. eps) then
+           write(6,*) "jcd",n," found in",iter,"iterations"
+           exit itloop
+        endif
+        
+  beta =  tmp3/tmp1
+!$acc update device (beta)
 !$acc kernels
-        beta =  tmp3/tmp1
 !$acc loop collapse(3) independent
         do k=ks,ke;  do j=js,je; do i=is,ie
             p(i,j,k) = rp(i,j,k) +beta * p(i,j,k)
@@ -404,7 +418,7 @@ subroutine Potential
 !$acc loop collapse(2) independent
         do k=ks,ke; do j=js,je
           p(is-1,j,k) = p(ie,j,k)
-          p(ie+1,j,k) = p(is,j,k)    
+          p(ie+1,j,k) = p(is,j,k)
         enddo; enddo
 
 !$acc loop collapse(2) independent
@@ -422,7 +436,6 @@ subroutine Potential
      
      enddo itloop
      
-     write(6,*)"debug10"
 !$acc kernels
      select case(n)
      case(1)
@@ -442,7 +455,6 @@ subroutine Potential
         enddo; enddo; enddo
      end select
 !$acc end kernels
-     write(6,*)"debug11"
   enddo nloop
 
 !$acc kernels
@@ -458,7 +470,6 @@ subroutine Potential
   enddo
 !$acc end kernels
 
-     write(6,*)"debug12"
   return
 end subroutine Potential
 
@@ -516,6 +527,7 @@ subroutine Fourier
      X3D(i,j,k,1) = kin(i,j,k)
      X3D(i,j,k,2) =  hk(i,j,k)
      X3D(i,j,k,3) =  hm(i,j,k)
+!     X3D(i,j,k,3) = hmm(i,j,k)
      X3D(i,j,k,4) = Hcr(i,j,k)
      X3D(i,j,k,5) = mag(i,j,k)
   enddo
@@ -523,14 +535,14 @@ subroutine Fourier
   enddo
 !$acc end kernels  
 
-!$acc update host (X3D)
-  write(6,*)"debug2",X3D(is,js,ks,1:nvar)
+!!$acc update host (X3D)
+!  write(6,*)"debug2",X3D(is,js,ks,1:nvar)
  
-!$acc kernels
-!$acc loop independent private(Xtotloc)
   do n=1,nvar
      Xtotloc = 0.0d0
-!$acc loop collapse(3)reduction(+:Xtotloc)
+!$acc update device (Xtotloc) 
+!$acc kernels
+!$acc loop collapse(3) reduction(+:Xtotloc)
   do k=ks,ke
   do j=js,je
   do i=is,ie
@@ -538,14 +550,11 @@ subroutine Fourier
   enddo
   enddo
   enddo
+!$acc end kernels
+!$acc update host (Xtotloc)
      Xtot(n) = Xtotloc
   enddo
-!$acc end kernels
-!$acc update host (Xtot)
-  
-  write(6,*)"debug3",Xtot(1:nvar)
-
-  
+! 
   dkx = 1.0d0/(dx*(in-2*igs))
   dky = 1.0d0/(dy*(jn-2*jgs))
   dkz = 1.0d0/(dz*(kn-2*kgs))
