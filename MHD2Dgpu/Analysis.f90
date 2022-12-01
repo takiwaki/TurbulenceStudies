@@ -85,9 +85,10 @@ subroutine ReadData
 
   is=1+igs
   js=1+jgs
+  ks=1
+  
   ie=in-igs
   je=jn-jgs
-  ks=1
   ke=1
 
   if(.not. is_inited)then
@@ -195,7 +196,7 @@ subroutine Vorticity
   k=1
   do j=js,je
   do i=is+1,ie
-     mpt(i,j,k) = mpt(i-1,j,k)  + (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
+     mpt(i,j,k) = mpt(i-1,j,k)  - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
   enddo
   enddo
 
