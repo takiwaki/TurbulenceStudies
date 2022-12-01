@@ -13,6 +13,7 @@ module fieldmod
     real(8),dimension(:,:,:),allocatable:: vor, kin ! vorticity
     real(8),dimension(:,:,:),allocatable:: jcd, mag ! current density
     real(8),dimension(:,:,:),allocatable:: mpt ! magnetic potential
+    real(8),dimension(:,:,:),allocatable:: mptpo ! magnetic potential
     real(8),dimension(:,:,:),allocatable:: hcr ! cross helicity
     real(8):: dx,dy
 
@@ -32,6 +33,7 @@ module fieldmod
 !$acc declare create(vor,kin)
 !$acc declare create(jcd,mag)
 !$acc declare create(mpt,hcr)
+!$acc declare create(mptpo)
 
 !$acc declare create(dx,dy)
 end module fieldmod
@@ -47,15 +49,19 @@ program data_analysis
   if(flag) then
      open (unitcon,file="control.dat" &
      &        ,status='old',form='formatted')
-     read (unitcon,*) fbeg,fend
+     read (unitcon,*) fbeg,fend     
      close(unitcon)
   endif
+
+  write(6,*) "data index span from",fbeg," - ",fend
 
   FILENUMBER: do incr  = fbeg,fend
      write(6,*) "file number",incr
      call ReadData
      call Vorticity
-     call Fourier
+     call Potential
+     call Snap2D
+!     call Fourier
   enddo FILENUMBER
 
   stop
@@ -82,6 +88,7 @@ subroutine ReadData
   in=izone+2*igs
   jn=jzone+2*jgs
   kn=1
+  write(6,*) "data size",in,jn,kn
 
   is=1+igs
   js=1+jgs
@@ -108,6 +115,7 @@ subroutine ReadData
 
   write(filename,'(a3,i5.5,a4)')"bin",incr,".dat"
   filename = trim(dirname)//filename
+  write(6,*) "open ",filename
   open(unitbin,file=filename,status='old',form='binary')
   read(unitbin)x1b(:),x1a(:)
   read(unitbin)x2b(:),x2a(:)
@@ -121,6 +129,8 @@ subroutine ReadData
   read(unitbin) bp(:,:,:)
   read(unitbin)  p(:,:,:)
   close(unitbin)
+  
+  write(6,*) "data read end"
   
   dx = x1b(2)-x1b(1)
   dy = x2b(2)-x2b(1)
@@ -154,13 +164,11 @@ subroutine Vorticity
      allocate( jcd(in,jn,kn))
      allocate( kin(in,jn,kn))
      allocate( mag(in,jn,kn))
-     allocate( mpt(in,jn,kn))
      allocate( Hcr(in,jn,kn))
 !$acc update device (vor)
 !$acc update device (jcd)
 !$acc update device (kin)
 !$acc update device (mag)
-!$acc update device (mpt)
 !$acc update device (Hcr)
      is_inited = .true.
   endif
@@ -192,48 +200,244 @@ subroutine Vorticity
   enddo
   enddo
 
-  mpt(:,:,:)= 0.0d0
-  k=1
-  do j=js,je
-  do i=is+1,ie
-     mpt(i,j,k) = mpt(i-1,j,k)  - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
-  enddo
-  enddo
-
-  do j=js+1,je
-  do i=is  ,ie
-     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
-  enddo
-  enddo
-
-
-
 !$acc end kernels
 !$acc update host (vor)
 !$acc update host (jcd)
 !$acc update host (kin)
 !$acc update host (mag)
 !$acc update host (Hcr)
-!$acc update host (mpt)
-
-  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
-  filename = trim(dirname)//filename
-  open(unitvor,file=filename,status='replace',form='formatted')
-
-  write(unitvor,'(1a,4(1x,E12.3))') "#",time
-  write(unitvor,'(1a,6(1x,a8))') "#","1:x    ","2:y     ","3:omg_z ","4:jcd_z ","5:E_kin ","6:E_mag "
-  do j=js,je
-  do i=is,ie
-     write(unitvor,'(6(1x,E12.3))') x1b(i),x2b(j),vor(i,j,k),jcd(i,j,k),kin(i,j,k),mag(i,j,k)
-  enddo
-     write(unitvor,*)
-  enddo
-
-  close(unitvor)
 
   return
 end subroutine Vorticity
+
+module potmod
+  implicit none
+  real(8),dimension(:,:,:),allocatable:: p,rp,r,Ap,phi
+  real(8)::a1,a2,a3,a4
+  real(8)::tmp1,tmp2,tmp3
+  real(8)::alpha,beta
+!$acc declare create(p,rp,r,Ap,phi)
+!$acc declare create(a1,a2,a3,a4)
+!$acc declare create(tmp1,tmp2,tmp3)
+!$acc declare create(alpha,beta)
+
+  real(8)::sumtest 
+!$acc declare create(sumtest)
+
+end module potmod
+
+subroutine Potential
+  use fieldmod, press=>p
+  use potmod
+  implicit none
+  integer::i,j,k
+  integer::iter
+  integer,parameter::itermax=1000
+  real(8),parameter::eps=3.0d-2
+
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer,parameter::unitvor=231
+
+  logical,save:: is_inited
+  data is_inited / .false. /
+
+  write(6,*) "calculate vector potential"
+
+  if(.not. is_inited)then
+     allocate(  p(in,jn,kn));   p(:,:,:)=0.0d0
+     allocate( rp(in,jn,kn));  rp(:,:,:)=0.0d0
+     allocate(  r(in,jn,kn));   r(:,:,:)=0.0d0
+     allocate( Ap(in,jn,kn));  Ap(:,:,:)=0.0d0
+     allocate(phi(in,jn,kn)); phi(:,:,:)=0.0d0
+!$acc update device (p,rp,r,Ap,phi)
+
+     allocate( mpt(in,jn,kn))
+     allocate( mptpo(in,jn,kn))
+!$acc update device (mpt,mptpo)
+     is_inited = .true.
+  endif
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js,je
+  do i=is,ie
+  mpt(i,j,k)= 0.0d0
+  enddo
+  enddo
+!$acc end kernels
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js+1,je
+  do i=is  ,ie
+     mpt(i,j,k) = mpt(i,j-1,k) + (b1(i,j,k) + b1(i,j-1,k))/2.0d0*dy
+  enddo
+  enddo
+!$acc end kernels
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js,je
+  do i=is+1,ie
+     mpt(i,j,k) = mpt(i-1,j,k) - (b2(i,j,k) + b2(i-1,j,k))/2.0d0*dx
+  enddo
+  enddo
+!$acc end kernels
+
+  a1=1.0d0/dx**2
+  a2=1.0d0/dy**2
+  a4=2.0d0*(a1+a2)
+!$acc update device (a1,a2,a4)
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js,je; do i=is,ie
+     r(i,j,k) = -jcd(i,j,k)
+  enddo; enddo
+!$acc end kernels
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js,je; do i=is,ie
+       p(i,j,k) = r(i,j,k)
+     phi(i,j,k) = 0.0d0
+  enddo; enddo
+!$acc end kernels
+
+!$acc kernels
+  k=ks
+!$acc loop independent
+  do j=js,je
+     p(is-1,j,k) = p(ie,j,k)
+     p(ie+1,j,k) = p(is,j,k)
+  enddo
+
+!$acc loop independent
+  do i=is,ie
+     p(i,js-1,k) = p(i,je,k)
+     p(i,je+1,k) = p(i,js,k)    
+  enddo
+!$acc end kernels
+
+!$acc loop seq
+  itloop: do iter=1,itermax
+     if(iter .eq. itermax) then
+        write(6,*) "iteration reaches max"
+     endif
+
+!$acc kernels
+  k=ks           
+!$acc loop collapse(2) independent
+  do j=js,je; do i=is,ie
+     Ap(i,j,k) =  a1*(p(i+1,j,k)+p(i-1,j,k)) &
+               & +a2*(p(i,j+1,k)+p(i,j-1,k)) &
+               & -a4*(p(i,j,k))
+  enddo; enddo
+!$acc end kernels
+!$acc update host (a1,a2,a4)
+
+  tmp1=0.0d0
+!$acc update device (tmp1)
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) reduction(+:tmp1)
+  do j=js,je; do i=is,ie
+     tmp1 = tmp1 + r(i,j,k)**2
+  enddo; enddo
+!$acc end kernels
+!$acc update host (tmp1)
   
+  tmp2=0.0d0
+!$acc update device (tmp2)
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) reduction(+:tmp2)
+  do j=js,je; do i=is,ie
+     tmp2 = tmp2 +  Ap(i,j,k)*p(i,j,k)
+  enddo; enddo
+!$acc end kernels
+!$acc update host (tmp2)
+
+  alpha= tmp1/tmp2
+!$acc update device (alpha)
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js,je; do i=is,ie
+     phi(i,j,k) = phi(i,j,k) + alpha * p(i,j,k)
+      rp(i,j,k) =   r(i,j,k) - alpha *Ap(i,j,k)
+  enddo; enddo
+!$acc end kernels
+
+  tmp3=0.0d0
+!$acc update device (tmp3)
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) reduction(+:tmp3)
+  do j=js,je; do i=is,ie
+     tmp3= tmp3 + rp(i,j,k)**2      
+  enddo; enddo
+!$acc end kernels
+!$acc update host (tmp3)
+  
+  if(tmp3 .lt. eps) then
+     write(6,*) "iteration end at step=",iter,"eps=",eps
+     exit itloop
+  endif
+  
+  beta =  tmp3/tmp1
+!$acc update device (beta)
+  
+!$acc kernels
+  k=ks 
+!$acc loop collapse(2) independent
+  do j=js,je; do i=is,ie
+     p(i,j,k) = rp(i,j,k) + beta * p(i,j,k)
+     r(i,j,k) = rp(i,j,k)
+  enddo; enddo
+!$acc end kernels
+
+!$acc kernels
+  k=ks
+!$acc loop independent
+  do j=js,je
+     p(is-1,j,k) = p(ie,j,k)
+     p(ie+1,j,k) = p(is,j,k)
+  enddo
+!$acc end kernels
+
+!$acc kernels
+  k=ks
+!$acc loop independent
+  do i=is,ie
+     p(i,js-1,k) = p(i,je,k)
+     p(i,je+1,k) = p(i,js,k)    
+  enddo
+!$acc end kernels
+  
+!  write(6,*) "debug2",iter, tmp1, tmp2, tmp3, alpha,beta
+
+  enddo itloop
+
+!$acc kernels
+  k=ks
+!$acc loop collapse(2) independent
+  do j=js,je; do i=is,ie
+     mptpo(i,j,k) = phi(i,j,k)
+  enddo; enddo
+!$acc end kernels
+!$acc update host (mpt,phi,mptpo)
+  write(6,*) "debug", mpt(is+1,js+1,ks),mptpo(is+1,js+1,ks),phi(is+1,js+1,ks)
+  return
+end subroutine Potential
+
 module spctrmod
 implicit none
   real(8),dimension(:,:,:),allocatable:: X2D
@@ -396,3 +600,40 @@ subroutine Fourier
 
   return
 end subroutine Fourier
+
+subroutine Snap2D
+  use fieldmod
+  implicit none
+  integer::i,j,k
+
+  character(20),parameter::dirname="output/"
+  character(40)::filename
+  integer,parameter::unitvor=123
+
+  logical,save:: is_inited
+  data is_inited / .false. /
+
+!$acc update host (vor,jcd,kin,mag,mpt,mptpo)
+    
+  write(filename,'(a3,i5.5,a4)')"vor",incr,".dat"
+  filename = trim(dirname)//filename
+  open(unitvor,file=filename,status='replace',form='formatted')
+  k=ks
+  write(unitvor,*) "# ",time
+  write(unitvor,*) "# x y omega_z"
+  do j=js,je
+  do i=is,ie
+     write(unitvor,'(10(1x,E12.3))') x1b(i),x2b(j) &
+                                 & ,vor(i,j,k),jcd(i,j,k),kin(i,j,k),mag(i,j,k) &
+                                 & ,mpt(i,j,k),mptpo(i,j,k)
+
+  enddo
+     write(unitvor,*)
+  enddo
+
+  close(unitvor)
+
+
+  return
+end subroutine Snap2D
+ 
