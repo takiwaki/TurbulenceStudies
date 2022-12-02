@@ -522,10 +522,10 @@ subroutine Fourier
 !!$acc update host (X3D)
 !  write(6,*)"debug2",X3D(is,js,ks,1:nvar)
  
+!$acc kernels
+!$acc loop independent
   do n=1,nvar
      Xtotloc = 0.0d0
-!$acc update device (Xtotloc) 
-!$acc kernels
 !$acc loop collapse(3) reduction(+:Xtotloc)
   do k=ks,ke
   do j=js,je
@@ -534,10 +534,10 @@ subroutine Fourier
   enddo
   enddo
   enddo
-!$acc end kernels
-!$acc update host (Xtotloc)
      Xtot(n) = Xtotloc
   enddo
+!$acc end kernels
+!$acc update host (Xtot)
 ! 
   dkx = 1.0d0/(dx*(in-2*igs))
   dky = 1.0d0/(dy*(jn-2*jgs))
