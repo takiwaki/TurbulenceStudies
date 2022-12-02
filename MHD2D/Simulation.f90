@@ -131,7 +131,7 @@ end module eosmod
       implicit none
       integer::i,j,k
       real(8)::pi
-      real(8),parameter::k_ini=2.0d0
+      real(8),parameter::k_ini=10.0d0
 
       real(8),dimension(in,jn,kn)::vpsi1b,vpsi2b
       real(8),dimension(in,jn,kn)::mpsi1b,mpsi2b
