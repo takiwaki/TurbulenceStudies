@@ -19,7 +19,7 @@ set style line 91 lt 1 lw 2 lc rgb "black" #
 set style line 92 lt 2 lw 6 lc rgb "black" #
 
 # input file
-if (exist("ifnum")==0 ) ifnum=581
+if (exist("ifnum")==0 ) ifnum=58
 input= sprintf("output/spc%05d.dat",ifnum)
 
 ##########################################
@@ -43,7 +43,7 @@ set key right top
 
 plot NaN notitle \
 , input  u 1:2  notitle w l ls 1  \
-, (0.2)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+, (6.0)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
 ##########################################
 # Kinetic helicity
@@ -72,9 +72,9 @@ set log
 set format y "10^{%L}"
 
 plot NaN notitle \
-, input  u 1:(5*$2)    title "Kinetic energy"   w l ls 1  \
-, input  u 1:(abs($3)) title "Kinetic helicity" w l ls 2  \
-, (20.0)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
+, input  u 1:($2)    title "Kinetic energy"   w l ls 1  \
+, input  u 1:(abs($3)/50000) title "Kinetic helicity" w l ls 2  \
+, (4.0)*(x/10)**(-5.0/3.0) title "-5/3" w l ls 91
 
 reset
 set term pop

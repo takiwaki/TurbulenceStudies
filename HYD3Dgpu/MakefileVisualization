@@ -1,0 +1,121 @@
+##########################################
+# Makefile for Turbulence Studies
+##########################################
+
+##########################################
+# Programs
+##########################################
+
+vis=Visualization.x
+
+######################	
+# complile options
+######################
+fc=ifort -extend-source
+fopt=-g -traceback -O2
+#fopt=-g -traceback -check all -fpe0
+
+##########################################
+# Timeseqencial data and figures
+##########################################
+
+######################
+# directory
+######################
+
+dird := bindata
+dira := output
+dirf := figures
+dirm := movies
+
+countfile=control.dat
+
+######################
+# files
+######################
+
+filename = ${dird}/unf00001.dat
+fileexists = $(shell ls | grep ${filename})
+ifeq (${fileexists}, ${filename})
+    BIN= $(shell ls ${dird}/unf*.dat)
+else
+    BIN= ${filename}
+endif
+
+VOR   = $(patsubst ${dird}/unf%.dat,${dira}/vor%.dat,$(BIN))
+VORPNG= $(patsubst ${dira}/vor%.dat,${dirf}/vor%.png,$(VOR))
+KINPNG= $(patsubst ${dira}/vor%.dat,${dirf}/kin%.png,$(VOR))
+
+##########################################
+# Movies
+##########################################
+
+kinmovie=${dirm}/anikin.mp4
+vormovie=${dirm}/anivor.mp4
+
+2Dmovies=${vormovie} ${kinmovie}
+
+moviefile=${2Dmovies}
+
+##########################################
+# Proceadures
+##########################################
+
+all: ${vis} ${moviefile}
+
+.PHONY: all clean allclean
+
+#################
+# ffmpeg
+#################
+
+movie: ${moviefile}
+
+${vormovie}: MakeMovie.sh ${VORPNG}
+	./MakeMovie.sh vor
+
+${kinmovie}: MakeMovie.sh ${KINPNG}
+	./MakeMovie.sh kin
+
+#################
+# gnuplot
+#################
+
+########################
+# 2D cross section
+########################
+2Dsnaps: ${VORPNG}
+
+${VORPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor vor.plt
+
+${KINPNG}: vor.plt MakeSnap.sh ${VOR}
+	./MakeSnap.sh vor vor.plt
+
+#################
+# visualization
+#################
+
+HDF5 = /home/takiwkkz/hdf5
+FLAGHDF =  -I${HDF5}/include -L${HDF5}/lib -lhdf5 -lhdf5_fortran 
+
+${vis}: Visualization.f90
+	${fc} ${fopt} ${FLAGHDF} $< -o ${vis}
+
+${VOR}: ${vis} ${BIN} ${countfile}
+	./${vis}
+
+count-number: ${countfile}
+
+${countfile}: CountBindata.sh
+	./CountBindata.sh
+
+#################
+# clean up
+#################
+clean:
+	rm -f ${vis} *.o *.mod *~
+
+allclean:
+	rm -fr ${dirm} ${dirf} ${dird} ${dira} ${countfile}
+
