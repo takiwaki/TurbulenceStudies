@@ -247,10 +247,8 @@ subroutine Fourier
      ky(kk) = kk *dkz
   enddo
 
-!$acc kernels
   Xhat3D(:,:,:,:,:) = 0.0d0
 
-!$acc loop reduction(+:Xhat3D) private(X)
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk
@@ -279,26 +277,20 @@ subroutine Fourier
   enddo
   enddo
   enddo
-!$acc end kernels
 
 
-!$acc kernels
   Xhat1D(:,:) = 0.0d0
   dkr = dkx/sqrt(3.0d0) ! minimum k
-!$acc loop reduction(+:Xhat1D) 
   do kk=1,nk
   do jk=1,nk
   do ik=1,nk
      kr = sqrt(kx(ik)**2 +ky(jk)**2 +kz(kk)**2)
      rk = min(nk,int(kr/dkr))
      Xhat1D(rk,1:nvar) = Xhat1D(rk,1:nvar) + sqrt(Xhat3D(ik,jk,kk,1,1:nvar)**2 & 
- &                         +                      Xhat3D(ik,jk,kk,1,1:nvar)**2)*dkx*dky*dkz/dkr
+ &                         +                      Xhat3D(ik,jk,kk,2,1:nvar)**2)*dkx*dky*dkz/dkr
   enddo
   enddo
   enddo
-!$acc end kernels
-
-!$acc update host (Xhat1D)
 
   write(filename,'(a3,i5.5,a4)')"spc",incr,".dat"
   filename = trim(dirname)//filename
